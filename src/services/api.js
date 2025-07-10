@@ -1,8 +1,8 @@
-// src/services/api.js
+// C:\reactjs node mongodb\pharmacie-frontend\src\services\api.js
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api', // ou l’URL de ton backend
+  baseURL: 'http://localhost:3001/api', // ou l’URL de ton backend
 });
 
 // Ajouter le token à chaque requête si connecté

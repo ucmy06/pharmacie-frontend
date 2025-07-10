@@ -1,4 +1,4 @@
-// src/components/Auth/Login.js
+// C:\reactjs node mongodb\pharmacie-frontend\src\components\Auth\Login.js
 import { useState } from 'react';
 import { loginUser } from '../../services/authService';
 import { useAuth } from '../../hooks/useAuth'; // ✅ import nommé
@@ -21,10 +21,19 @@ export default function Login() {
     try {
       const res = await loginUser(form);
       login(res.data.data.user, res.data.data.token);
-      navigate('/'); // rediriger après connexion (ex: tableau de bord)
-    } catch (err) {
+      const { role } = res.data.data.user;
+      console.log('🔥 Données reçues après login :', res.data.data);
+
+      if (role === 'admin') {
+      navigate('/admin-dashboard');
+      } else if (role === 'pharmacie') {
+      navigate('/pharmacie-dashboard');
+      } else {
+      navigate('/client-dashboard');
+      }
+      } catch (err) {
       setError(err.response?.data?.message || 'Erreur lors de la connexion');
-    }
+      }
   };
 
   return (
