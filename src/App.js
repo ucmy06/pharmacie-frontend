@@ -1,4 +1,4 @@
-// src/App.js
+// C:\reactjs node mongodb\pharmacie-frontend\src\App.js
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './components/Auth/Login';
@@ -12,6 +12,10 @@ import ProtectedDashboard from './pages/ProtectedDashboard';
 import AdminDashboard from './pages/dashboards/AdminDashboard';
 import ClientDashboard from './pages/dashboards/ClientDashboard';
 import PharmacieDashboard from './pages/dashboards/PharmacieDashboard';
+import PharmacyRequestsPage from './pages/admin/PharmacyRequestsPage';
+import DemandePharmacieForm from './pages/demande/DemandePharmacieForm';
+import MaDemandePharmacie from './pages/demande/MaDemandePharmacie';
+
 import './App.css'; // Assurez-vous que ce fichier existe pour les styles
 
 function App() {
@@ -36,7 +40,9 @@ function App() {
         <Route path="/admin-dashboard" element={<AdminDashboard />} /> {/* Ajouté pour l'admin */}
         <Route path="/client-dashboard" element={<ClientDashboard />} /> {/* Ajouté pour le client */}
         <Route path="/pharmacie-dashboard" element={<PharmacieDashboard />} /> {/* Ajouté pour la pharmacie */}
-
+        <Route path="/admin/pharmacy-requests" element={<PharmacyRequestsPage />} />
+        <Route path="/demande-pharmacie" element={<DemandePharmacieForm />} />
+        <Route path="/ma-demande-pharmacie" element={<MaDemandePharmacie />} />
 
 
       </Routes>

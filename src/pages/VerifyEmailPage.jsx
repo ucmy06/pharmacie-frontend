@@ -10,65 +10,71 @@ const VerifyEmailPage = () => {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(true);
   
+useEffect(() => {
+  let called = false;
 
-  useEffect(() => {
-    const verify = async () => {
-      console.log("🔑 Token reçu dans l'URL:", token);
-      console.log("🔑 Longueur du token:", token?.length);
+  const verify = async () => {
+    if (called) return;
+    called = true;
+
+    console.log("🔑 Token reçu dans l'URL:", token);
+    console.log("🔑 Longueur du token:", token?.length);
+    
+    if (!token) {
+      setMessage("Token manquant dans l'URL");
+      setSuccess(false);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      console.log("🚀 Envoi de la requête de vérification...");
       
-      if (!token) {
-        setMessage("Token manquant dans l'URL");
-        setSuccess(false);
-        setLoading(false);
-        return;
+      const response = await axiosInstance.get(`/api/auth/verify-email/${token}`);
+      
+      console.log("✅ Réponse reçue:", response.data);
+      
+      setMessage(response.data.message || "Email vérifié avec succès!");
+      setSuccess(true);
+      
+      // Rediriger vers la page de connexion après 3 secondes
+      setTimeout(() => {
+        navigate('/login', { 
+          state: { message: "Votre email a été vérifié. Vous pouvez maintenant vous connecter." }
+        });
+      }, 3000);
+      
+    } catch (error) {
+      console.error("❌ Erreur lors de la vérification:", error);
+      
+      let errorMessage = "Erreur de vérification";
+      
+      if (error.response) {
+        console.error("📊 Status:", error.response.status);
+        console.error("📊 Data:", error.response.data);
+        errorMessage = error.response.data?.message || `Erreur ${error.response.status}`;
+      } else if (error.request) {
+        console.error("📡 Aucune réponse reçue:", error.request);
+        errorMessage = "Impossible de contacter le serveur";
+      } else {
+        console.error("⚠️ Erreur:", error.message);
+        errorMessage = error.message;
       }
+      
+      setMessage(errorMessage);
+      setSuccess(false);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      try {
-        console.log("🚀 Envoi de la requête de vérification...");
-        
-        const response = await axiosInstance.get(`/api/auth/verify-email/${token}`);
-        
-        console.log("✅ Réponse reçue:", response.data);
-        
-        setMessage(response.data.message || "Email vérifié avec succès!");
-        setSuccess(true);
-        
-        // Rediriger vers la page de connexion après 3 secondes
-        setTimeout(() => {
-          navigate('/login', { 
-            state: { message: "Votre email a été vérifié. Vous pouvez maintenant vous connecter." }
-          });
-        }, 3000);
-        
-      } catch (error) {
-        console.error("❌ Erreur lors de la vérification:", error);
-        
-        let errorMessage = "Erreur de vérification";
-        
-        if (error.response) {
-          // Erreur de réponse du serveur
-          console.error("📊 Status:", error.response.status);
-          console.error("📊 Data:", error.response.data);
-          errorMessage = error.response.data?.message || `Erreur ${error.response.status}`;
-        } else if (error.request) {
-          // Erreur de requête (pas de réponse)
-          console.error("📡 Aucune réponse reçue:", error.request);
-          errorMessage = "Impossible de contacter le serveur";
-        } else {
-          // Autre erreur
-          console.error("⚠️ Erreur:", error.message);
-          errorMessage = error.message;
-        }
-        
-        setMessage(errorMessage);
-        setSuccess(false);
-      } finally {
-        setLoading(false);
-      }
-    };
+  verify();
 
-    verify();
-  }, [token, navigate]);
+  // cleanup optionnel pour éviter des effets indésirables
+  return () => {
+    called = true;
+  };
+}, [token, navigate]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
