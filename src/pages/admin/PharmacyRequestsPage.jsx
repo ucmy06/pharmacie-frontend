@@ -34,21 +34,31 @@ export default function PharmacyRequestsPage() {
   }, [token]);
 
   const handleUpdateRequest = async (userId, newStatut) => {
-    if (!window.confirm(`Confirmer le changement de statut à : ${newStatut} ?`)) return;
-
     try {
-      await axios.put(
-        `http://localhost:3001/api/admin/pharmacy-requests/${userId}/statut`,
-        { statut: newStatut },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      let url = '';
+      let data = {};
 
-      setRequests(prev =>
-        prev.map(req =>
+      if (newStatut === 'approuvee') {
+        // Utiliser la route spécifique pour l'approbation
+        url = `http://localhost:3001/api/admin/pharmacy-requests/${userId}/approve`;
+        data = { commentaire: 'Demande approuvée' };
+      } else if (newStatut === 'rejetee') {
+        const commentaire = prompt("Commentaire pour le rejet :");
+        if (!commentaire) return alert("Commentaire requis !");
+        
+        // Utiliser la route spécifique pour le rejet
+        url = `http://localhost:3001/api/admin/pharmacy-requests/${userId}/reject`;
+        data = { commentaire };
+      }
+
+      // Faire la requête PUT avec l'URL et les données correctes
+      await axios.put(url, data, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // Mettre à jour l'état local
+      setRequests((prev) =>
+        prev.map((req) =>
           req._id === userId
             ? {
                 ...req,
@@ -60,9 +70,12 @@ export default function PharmacyRequestsPage() {
             : req
         )
       );
+
+      alert(`Demande ${newStatut === 'approuvee' ? 'approuvée' : 'rejetée'} avec succès !`);
+      
     } catch (error) {
       console.error('Erreur mise à jour du statut :', error);
-      alert('Erreur lors de la mise à jour du statut.');
+      alert('Erreur lors de la mise à jour: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -70,7 +83,7 @@ export default function PharmacyRequestsPage() {
 
   return (
     <div className="p-8">
-      <h1 className="text-2xl font-bold mb-6">📋 Demandes d’intégration de pharmacies</h1>
+      <h1 className="text-2xl font-bold mb-6">📋 Demandes d'intégration de pharmacies</h1>
       {requests.length === 0 ? (
         <p>Aucune demande en attente.</p>
       ) : (
@@ -131,13 +144,13 @@ export default function PharmacyRequestsPage() {
 
                 <div className="mt-4 flex gap-4">
                   <button
-                    onClick={() => handleUpdateRequest(req._id, 'approuvée')}
+                    onClick={() => handleUpdateRequest(req._id, 'approuvee')}
                     className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
                   >
                     ✅ Valider
                   </button>
                   <button
-                    onClick={() => handleUpdateRequest(req._id, 'rejetée')}
+                    onClick={() => handleUpdateRequest(req._id, 'rejetee')}
                     className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
                   >
                     ❌ Rejeter
