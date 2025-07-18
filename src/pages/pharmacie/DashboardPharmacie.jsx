@@ -1,10 +1,10 @@
-// src/pages/pharmacie/PharmacieDashboard.jsx
+// C:\reactjs node mongodb\pharmacie-frontend\src\pages\pharmacie\DashboardPharmacie.jsx
 
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-export default function PharmacieDashboard() {
+export default function DashboardPharmacie() {
   const navigate = useNavigate();
   const [pharmacie, setPharmacie] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -21,13 +21,7 @@ export default function PharmacieDashboard() {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(res => {
-        console.log('Réponse API complète:', res.data);
-        // CORRECTION : Extraire les données de la pharmacie depuis res.data.pharmacie
-        if (res.data.success && res.data.pharmacie) {
-          setPharmacie(res.data.pharmacie);
-        } else {
-          console.error('Structure de réponse inattendue:', res.data);
-        }
+        setPharmacie(res.data);
         setLoading(false);
       })
       .catch(err => {
@@ -38,14 +32,11 @@ export default function PharmacieDashboard() {
       });
   }, [navigate]);
 
-  
-const handleLogout = () => {
-  localStorage.removeItem('pharmacyToken');
-  localStorage.removeItem('pharmacyInfo');
-  localStorage.removeItem('userToken');
-  localStorage.removeItem('userInfo');
-  navigate('/pharmacie/connexion');
-};
+  const handleLogout = () => {
+    localStorage.removeItem('pharmacyToken');
+    localStorage.removeItem('pharmacyInfo');
+    navigate('/client-dashboard');
+  };
 
   if (loading) return <div className="p-6">Chargement...</div>;
 
@@ -57,19 +48,19 @@ const handleLogout = () => {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-4">Tableau de bord de la Pharmacie</h1>
+      <h1 className="text-2xl font-semibold mb-4">Tableau de bord - Pharmacie</h1>
       <div className="bg-white rounded shadow p-4">
-        <p><strong>Nom :</strong> {nom}</p>
-        <p><strong>Email :</strong> {email}</p>
-        <p><strong>Numéro :</strong> {pharmacieInfo.numeroPharmacie}</p>
-        <p><strong>Livraison disponible :</strong> {pharmacieInfo.livraisonDisponible ? 'Oui' : 'Non'}</p>
+        <p><strong>Nom:</strong> {nom}</p>
+        <p><strong>Email:</strong> {email}</p>
+        <p><strong>Numéro:</strong> {pharmacieInfo.numeroPharmacie}</p>
+        <p><strong>Livraison disponible:</strong> {pharmacieInfo.livraisonDisponible ? 'Oui' : 'Non'}</p>
 
-        <div className="mt-6 flex gap-4">
+        <div className="mt-4 flex gap-4">
           <button
             onClick={() => navigate('/pharmacie/profil')}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
           >
-            Modifier le profil
+            Voir / Modifier Profil
           </button>
           <button
             onClick={handleLogout}

@@ -1,3 +1,5 @@
+// C:\reactjs node mongodb\pharmacie-frontend\src\components\Auth\Login.js
+
 import { useState } from 'react';
 import { loginUser } from '../../services/authService';
 import { useAuth } from '../../hooks/useAuth';
@@ -14,7 +16,7 @@ export default function Login() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
-    if (error) setError(''); // Efface l'erreur quand l'utilisateur tape
+    if (error) setError('');
   };
 
   const handleSubmit = async (e) => {
@@ -24,21 +26,78 @@ export default function Login() {
     
     try {
       const res = await loginUser(form);
-      login(res.data.data.user, res.data.data.token);
+      console.log('🔥 Réponse complète du serveur :', res.data);
+      
+      // ✅ VÉRIFICATION DE LA STRUCTURE DE LA RÉPONSE
+      if (!res.data || !res.data.success) {
+        throw new Error('Réponse invalide du serveur');
+      }
+
+      if (!res.data.data || !res.data.data.user || !res.data.data.token) {
+        throw new Error('Données utilisateur manquantes');
+      }
+
+      // ✅ CONNEXION DE L'UTILISATEUR
+      const { user, token } = res.data.data;
+
+      login(user, token);
+      localStorage.setItem('userToken', token);
+      localStorage.setItem('userInfo', JSON.stringify(user));
+
+      console.log('🔑 Token utilisateur enregistré:');
       const { role } = res.data.data.user;
       
-      console.log('🔥 Données reçues après login :', res.data.data);
-      
-      // Redirection basée sur le rôle
-      if (role === 'admin') {
-        navigate('/admin-dashboard');
-      } else if (role === 'pharmacie') {
-        navigate('/pharmacie-dashboard');
-      } else {
-        navigate('/client-dashboard');
+      console.log('🔑 Données reçues:', {
+        motDePasseTemporaire: res.data.motDePasseTemporaire,
+        role: role,
+        success: res.data.success
+      });
+
+      // ✅ GESTION STRICTE DU MOT DE PASSE TEMPORAIRE
+      if (res.data.motDePasseTemporaire === true) {
+        console.log('⚠️ Mot de passe temporaire détecté - Redirection vers changement');
+        navigate('/change-password', { 
+          state: { 
+            isTemporary: true,
+            message: 'Veuillez changer votre mot de passe temporaire'
+          },
+          replace: true // ✅ Important : remplace l'historique
+        });
+        return;
       }
+      
+      // ✅ REDIRECTION NORMALE SELON LE RÔLE
+      console.log('🎯 Redirection selon le rôle:', role);
+      
+      let redirectPath = '/client-dashboard'; // Valeur par défaut
+      
+      if (role === 'admin') {
+        redirectPath = '/admin-dashboard';
+        console.log('👑 Redirection vers admin dashboard');
+      } else if (role === 'pharmacie') {
+        redirectPath = '/pharmacie-dashboard';
+        console.log('🏥 Redirection vers pharmacie dashboard');
+      } else {
+        console.log('👤 Redirection vers client dashboard');
+      }
+
+      // ✅ REDIRECTION FORCÉE AVEC REPLACE
+      navigate(redirectPath, { replace: true });
+      
+      // ✅ OPTIONNEL : Forcer le rechargement si nécessaire
+      // window.location.href = redirectPath;
+      
     } catch (err) {
-      setError(err.response?.data?.message || 'Erreur lors de la connexion');
+      console.error('❌ Erreur de connexion:', err);
+      
+      // ✅ GESTION SPÉCIFIQUE DES ERREURS
+      if (err.response?.data?.code === 'EMAIL_NOT_VERIFIED') {
+        setError('Veuillez vérifier votre email avant de vous connecter');
+      } else if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError('Erreur lors de la connexion. Veuillez réessayer.');
+      }
     } finally {
       setLoading(false);
     }

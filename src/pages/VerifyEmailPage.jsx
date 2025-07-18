@@ -1,5 +1,4 @@
-// C:\reactjs node mongodb\pharmacie-frontend\src\pages\VerifyEmailPage.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axiosInstance from '../utils/axiosConfig';
 
@@ -9,72 +8,92 @@ const VerifyEmailPage = () => {
   const [message, setMessage] = useState('Vérification en cours...');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(true);
+  const hasVerified = useRef(false); // Éviter le double appel
   
-useEffect(() => {
-  let called = false;
-
-  const verify = async () => {
-    if (called) return;
-    called = true;
-
-    console.log("🔑 Token reçu dans l'URL:", token);
-    console.log("🔑 Longueur du token:", token?.length);
-    
-    if (!token) {
-      setMessage("Token manquant dans l'URL");
-      setSuccess(false);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      console.log("🚀 Envoi de la requête de vérification...");
-      
-      const response = await axiosInstance.get(`/api/auth/verify-email/${token}`);
-      
-      console.log("✅ Réponse reçue:", response.data);
-      
-      setMessage(response.data.message || "Email vérifié avec succès!");
-      setSuccess(true);
-      
-      // Rediriger vers la page de connexion après 3 secondes
-      setTimeout(() => {
-        navigate('/login', { 
-          state: { message: "Votre email a été vérifié. Vous pouvez maintenant vous connecter." }
-        });
-      }, 3000);
-      
-    } catch (error) {
-      console.error("❌ Erreur lors de la vérification:", error);
-      
-      let errorMessage = "Erreur de vérification";
-      
-      if (error.response) {
-        console.error("📊 Status:", error.response.status);
-        console.error("📊 Data:", error.response.data);
-        errorMessage = error.response.data?.message || `Erreur ${error.response.status}`;
-      } else if (error.request) {
-        console.error("📡 Aucune réponse reçue:", error.request);
-        errorMessage = "Impossible de contacter le serveur";
-      } else {
-        console.error("⚠️ Erreur:", error.message);
-        errorMessage = error.message;
+  useEffect(() => {
+    const verify = async () => {
+      // Éviter le double appel
+      if (hasVerified.current) {
+        console.log("⚠️ Tentative de double appel évitée");
+        return;
       }
       
-      setMessage(errorMessage);
-      setSuccess(false);
-    } finally {
-      setLoading(false);
-    }
-  };
+      hasVerified.current = true;
 
-  verify();
+      console.log("🔑 Token reçu dans l'URL:", token);
+      console.log("🔑 Longueur du token:", token?.length);
+      
+      if (!token) {
+        setMessage("Token manquant dans l'URL");
+        setSuccess(false);
+        setLoading(false);
+        return;
+      }
 
-  // cleanup optionnel pour éviter des effets indésirables
-  return () => {
-    called = true;
-  };
-}, [token, navigate]);
+      try {
+        console.log("🚀 Envoi de la requête de vérification...");
+        
+        const response = await axiosInstance.get(`/api/auth/verify-email/${token}`);
+        
+        console.log("✅ Réponse reçue:", response.data);
+        
+        setMessage(response.data.message || "Email vérifié avec succès!");
+        setSuccess(true);
+        
+        // Rediriger vers la page de connexion après 3 secondes
+        setTimeout(() => {
+          navigate('/login', { 
+            state: { message: "Votre email a été vérifié. Vous pouvez maintenant vous connecter." }
+          });
+        }, 3000);
+        
+      } catch (error) {
+        console.error("❌ Erreur lors de la vérification:", error);
+        
+        let errorMessage = "Erreur de vérification";
+        
+        if (error.response) {
+          console.error("📊 Status:", error.response.status);
+          console.error("📊 Data:", error.response.data);
+          
+          const data = error.response.data;
+          
+          // Gérer les différents codes d'erreur
+          if (data.code === 'ALREADY_VERIFIED') {
+            setMessage("Email déjà vérifié. Votre compte est actif.");
+            setSuccess(true);
+            
+            setTimeout(() => {
+              navigate('/login', { 
+                state: { message: "Votre compte est déjà vérifié. Vous pouvez vous connecter." }
+              });
+            }, 3000);
+            
+            return;
+          } else if (data.code === 'TOKEN_EXPIRED') {
+            errorMessage = "Token expiré. Veuillez demander un nouveau lien.";
+          } else if (data.code === 'INVALID_TOKEN') {
+            errorMessage = "Token invalide.";
+          } else {
+            errorMessage = data.message || `Erreur ${error.response.status}`;
+          }
+        } else if (error.request) {
+          console.error("📡 Aucune réponse reçue:", error.request);
+          errorMessage = "Impossible de contacter le serveur";
+        } else {
+          console.error("⚠️ Erreur:", error.message);
+          errorMessage = error.message;
+        }
+        
+        setMessage(errorMessage);
+        setSuccess(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    verify();
+  }, [token, navigate]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">

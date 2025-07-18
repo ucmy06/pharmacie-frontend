@@ -1,35 +1,32 @@
 // C:\reactjs node mongodb\pharmacie-frontend\src\hooks\useAuth.js
-
-import { createContext, useContext, useState, useEffect } from 'react';
+import { useContext, createContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext();
 
-export const AuthProvider = ({ children }) => {
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem('userToken'));
 
-  // ✅ Restaurer les données au chargement
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+    if (token) {
+      const storedUser = JSON.parse(localStorage.getItem('userInfo'));
+      setUser(storedUser);
     }
-  }, []);
+  }, [token]);
 
-  const login = (userData, tokenData) => {
+  // ✅ AJOUT : fonction login accessible par les composants
+  const login = (userData, authToken) => {
     setUser(userData);
-    setToken(tokenData);
-    localStorage.setItem('token', tokenData);
-    localStorage.setItem('user', JSON.stringify(userData));
+    setToken(authToken);
+    localStorage.setItem('userInfo', JSON.stringify(userData));
+    localStorage.setItem('userToken', authToken);
   };
 
   const logout = () => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    localStorage.removeItem('userInfo');
+    localStorage.removeItem('userToken');
   };
 
   return (
@@ -37,6 +34,8 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
-export const useAuth = () => useContext(AuthContext);
+export function useAuth() {
+  return useContext(AuthContext);
+}
