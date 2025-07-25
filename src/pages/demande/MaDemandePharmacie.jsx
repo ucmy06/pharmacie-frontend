@@ -46,6 +46,7 @@ export default function MaDemandePharmacie() {
               : demande.statutDemande === 'rejetee'
               ? 'text-red-600'
               : 'text-yellow-600'
+              
           }
         >
           {demande.statutDemande.replace('_', ' ').toUpperCase()}

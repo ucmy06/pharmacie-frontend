@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { loginUser } from '../../services/authService';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode';
+
 
 export default function Login() {
   const [form, setForm] = useState({ email: '', motDePasse: '' });
@@ -23,74 +25,80 @@ export default function Login() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    
+
     try {
       const res = await loginUser(form);
       console.log('🔥 Réponse complète du serveur :', res.data);
-      
+
       // ✅ VÉRIFICATION DE LA STRUCTURE DE LA RÉPONSE
       if (!res.data || !res.data.success) {
+        console.error('❌ Réponse invalide:', res.data);
         throw new Error('Réponse invalide du serveur');
       }
 
       if (!res.data.data || !res.data.data.user || !res.data.data.token) {
+        console.error('❌ Données manquantes:', res.data.data);
         throw new Error('Données utilisateur manquantes');
       }
 
-      // ✅ CONNEXION DE L'UTILISATEUR
+      // ✅ DÉCODAGE DU TOKEN
       const { user, token } = res.data.data;
+      let decoded;
+      try {
+        decoded = jwtDecode(token);
+        console.log('🔑 Token décodé:', decoded);
+      } catch (error) {
+        console.error('❌ Erreur de décodage du token:', error);
+        throw new Error('Token invalide');
+      }
 
+      // ✅ VÉRIFIER LE RÔLE PHARMACIE
+      if (decoded.role === 'pharmacie') {
+        setError('Vous ne pouvez pas vous connecter en tant que pharmacie sur cette page. Veuillez d\'abord vous connecter en tant que client.');
+        setLoading(false);
+        return;
+      }
+
+      // ✅ CONNEXION DE L'UTILISATEUR
       login(user, token);
-      localStorage.setItem('userToken', token);
+      localStorage.setItem('pharmacyToken', token);
       localStorage.setItem('userInfo', JSON.stringify(user));
 
-      console.log('🔑 Token utilisateur enregistré:');
+      console.log('🔑 Token stocké:', token);
+      console.log('🔑 User info:', user);
       const { role } = res.data.data.user;
-      
-      console.log('🔑 Données reçues:', {
-        motDePasseTemporaire: res.data.motDePasseTemporaire,
-        role: role,
-        success: res.data.success
-      });
 
-      // ✅ GESTION STRICTE DU MOT DE PASSE TEMPORAIRE
+      // ✅ GESTION DU MOT DE PASSE TEMPORAIRE
       if (res.data.motDePasseTemporaire === true) {
         console.log('⚠️ Mot de passe temporaire détecté - Redirection vers changement');
-        navigate('/change-password', { 
-          state: { 
+        navigate('/change-password', {
+          state: {
             isTemporary: true,
-            message: 'Veuillez changer votre mot de passe temporaire'
+            message: 'Veuillez changer votre mot de passe temporaire',
           },
-          replace: true // ✅ Important : remplace l'historique
+          replace: true,
         });
         return;
       }
-      
-      // ✅ REDIRECTION NORMALE SELON LE RÔLE
+
+      // ✅ REDIRECTION SELON LE RÔLE
       console.log('🎯 Redirection selon le rôle:', role);
-      
-      let redirectPath = '/client-dashboard'; // Valeur par défaut
-      
+      let redirectPath = '/client-dashboard';
+
       if (role === 'admin') {
         redirectPath = '/admin-dashboard';
         console.log('👑 Redirection vers admin dashboard');
-      } else if (role === 'pharmacie') {
-        redirectPath = '/pharmacie-dashboard';
-        console.log('🏥 Redirection vers pharmacie dashboard');
-      } else {
+      } else if (role === 'client') {
         console.log('👤 Redirection vers client dashboard');
+      } else {
+        console.error('❌ Rôle inconnu:', role);
+        throw new Error('Rôle utilisateur non reconnu');
       }
 
-      // ✅ REDIRECTION FORCÉE AVEC REPLACE
       navigate(redirectPath, { replace: true });
-      
-      // ✅ OPTIONNEL : Forcer le rechargement si nécessaire
-      // window.location.href = redirectPath;
-      
+
     } catch (err) {
       console.error('❌ Erreur de connexion:', err);
-      
-      // ✅ GESTION SPÉCIFIQUE DES ERREURS
       if (err.response?.data?.code === 'EMAIL_NOT_VERIFIED') {
         setError('Veuillez vérifier votre email avant de vous connecter');
       } else if (err.response?.data?.message) {
@@ -113,7 +121,6 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4 relative overflow-hidden">
-      {/* Particules flottantes en arrière-plan */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-blue-400 rounded-full animate-pulse opacity-60"></div>
         <div className="absolute top-1/3 right-1/3 w-1 h-1 bg-purple-400 rounded-full animate-bounce opacity-40"></div>
@@ -121,13 +128,10 @@ export default function Login() {
         <div className="absolute top-2/3 right-1/4 w-2 h-2 bg-pink-400 rounded-full animate-bounce opacity-50"></div>
       </div>
 
-      {/* Contenu principal */}
       <div className="relative group">
-        {/* Bordure animée */}
         <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 rounded-2xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse"></div>
-        
-        {/* Formulaire principal avec fond transparent */}
-        <form 
+
+        <form
           onSubmit={handleSubmit}
           className="relative bg-black/20 backdrop-blur-xl border border-white/10 rounded-2xl p-8 w-96 shadow-2xl"
         >
@@ -136,7 +140,6 @@ export default function Login() {
             <p className="text-gray-300 text-sm">Accédez à votre espace PharmOne</p>
           </div>
 
-          {/* Message d'erreur */}
           {error && (
             <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg animate-pulse">
               <p className="text-red-300 text-sm font-medium">{error}</p>
@@ -144,10 +147,9 @@ export default function Login() {
           )}
 
           <div className="space-y-6">
-            {/* Champ Email */}
             <div className="relative">
-              <label 
-                htmlFor="email" 
+              <label
+                htmlFor="email"
                 className="block text-sm font-medium text-gray-300 mb-2"
               >
                 E-mail
@@ -177,10 +179,9 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Champ Mot de passe */}
             <div className="relative">
-              <label 
-                htmlFor="motDePasse" 
+              <label
+                htmlFor="motDePasse"
                 className="block text-sm font-medium text-gray-300 mb-2"
               >
                 Mot de passe
@@ -210,7 +211,6 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Bouton de connexion */}
             <button
               type="submit"
               disabled={loading}
@@ -232,7 +232,6 @@ export default function Login() {
               </div>
             </button>
 
-            {/* Liens */}
             <div className="text-center">
               <button
                 type="button"

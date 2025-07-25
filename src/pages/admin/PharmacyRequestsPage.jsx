@@ -1,5 +1,3 @@
-// src/pages/admin/PharmacyRequestsPage.jsx
-
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../hooks/useAuth';
@@ -22,6 +20,8 @@ export default function PharmacyRequestsPage() {
             },
           }
         );
+        console.log('PharmacyRequestsPage: Réponse fetchRequests:', response.data);
+        console.log('PharmacyRequestsPage: Requests reçus:', response.data.data?.requests || []);
         setRequests(response.data.data?.requests || []);
       } catch (error) {
         console.error('Erreur lors du chargement des demandes :', error);
@@ -39,20 +39,17 @@ export default function PharmacyRequestsPage() {
       let data = {};
 
       if (newStatut === 'approuvee') {
-        // Utiliser la route spécifique pour l'approbation
         url = `http://localhost:3001/api/admin/pharmacy-requests/${userId}/approve`;
         data = { commentaire: 'Demande approuvée' };
       } else if (newStatut === 'rejetee') {
         const commentaire = prompt("Commentaire pour le rejet :");
         if (!commentaire) return alert("Commentaire requis !");
-        
-        // Utiliser la route spécifique pour le rejet
         url = `http://localhost:3001/api/admin/pharmacy-requests/${userId}/reject`;
         data = { commentaire };
       }
 
-      // Faire la requête PUT avec l'URL et les données correctes
-      await axios.put(url, data, {
+      // Utiliser POST au lieu de PUT
+      await axios.post(url, data, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

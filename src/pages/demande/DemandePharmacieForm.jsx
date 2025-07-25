@@ -1,10 +1,11 @@
-//C:\reactjs node mongodb\pharmacie-frontend\src\pages\demande\DemandePharmacieForm.jsx
+// C:\reactjs node mongodb\pharmacie-frontend\src\pages\demande\DemandePharmacieForm.jsx
+
 
 import { useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../hooks/useAuth';
 
-export default function DemandePharmacieForm() {
+export default function DemandePharmacieRequest() {
   const { token } = useAuth();
   const [form, setForm] = useState({
     nomPharmacie: '',
@@ -17,19 +18,21 @@ export default function DemandePharmacieForm() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  const handleChange = e => {
+  const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleFileChange = e => {
+  const handleFileChange = (e) => {
     setPhotoPharmacie(e.target.files[0]);
+    console.log('📸 Photo sélectionnée:', e.target.files[0]?.name);
   };
 
-  const handleDocumentsChange = e => {
+  const handleDocumentsChange = (e) => {
     setDocumentsVerification(Array.from(e.target.files));
+    console.log('📄 Documents sélectionnés:', Array.from(e.target.files).map(f => f.name));
   };
 
-  const handleSubmit = async e => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMessage('');
@@ -44,6 +47,12 @@ export default function DemandePharmacieForm() {
       }
       documentsVerification.forEach(file => {
         formData.append('documentsVerification', file);
+      });
+
+      console.log('📤 Envoi FormData:', {
+        nomPharmacie: form.nomPharmacie,
+        photoPharmacie: photoPharmacie?.name,
+        documentsVerification: documentsVerification.map(f => f.name),
       });
 
       await axios.post(
