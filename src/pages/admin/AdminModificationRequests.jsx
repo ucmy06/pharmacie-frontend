@@ -1,51 +1,33 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { jwtDecode } from 'jwt-decode';
+import { useAuth } from '../../hooks/useAuth';
+import axiosInstance from '../../utils/axiosConfig';
 
 export default function AdminModificationRequests() {
+  const { user, token, isLoading } = useAuth();
   const [requests, setRequests] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [requestType, setRequestType] = useState('all');
   const [comment, setComment] = useState('');
-  const token = localStorage.getItem('pharmacyToken');
   const navigate = useNavigate();
 
   useEffect(() => {
-    console.log('AdminModificationRequests: Token:', token);
-    if (!token) {
-      console.log('AdminModificationRequests: No token, redirecting to /login');
-      setError('Veuillez vous connecter en tant qu\'admin.');
-      navigate('/login');
-      return;
-    }
-
-    let decoded;
-    try {
-      decoded = jwtDecode(token);
-      console.log('AdminModificationRequests: Decoded token:', decoded);
-      if (decoded.role !== 'admin') {
-        console.log('AdminModificationRequests: Non-admin role:', decoded.role);
-        setError('Accès non autorisé. Veuillez vous connecter en tant qu\'admin.');
+    if (isLoading || !token || !user || user.role !== 'admin') {
+      if (!isLoading) {
+        console.log('AdminModificationRequests: Accès non autorisé, redirection vers /login');
+        setError('Veuillez vous connecter en tant qu\'admin.');
         navigate('/login');
-        return;
       }
-    } catch (error) {
-      console.error('AdminModificationRequests: Error decoding token:', error);
-      setError('Token invalide. Veuillez vous reconnecter.');
-      navigate('/login');
       return;
     }
 
     async function fetchRequests() {
       try {
-        const res = await axios.get('http://localhost:3001/api/admin/modification-requests', {
-          headers: { Authorization: `Bearer ${token}` },
+        const res = await axiosInstance.get('/api/admin/modification-requests', {
           params: { type: requestType, statut: 'en_attente' }
         });
         console.log('AdminModificationRequests: Réponse fetchRequests:', res.data);
-        console.log('AdminModificationRequests: Requests reçus:', res.data.data.requests);
         if (res.data.success) {
           setRequests(res.data.data.requests || []);
         } else {
@@ -53,11 +35,9 @@ export default function AdminModificationRequests() {
         }
       } catch (err) {
         console.error('AdminModificationRequests: Erreur fetchRequests:', err);
+        setError(err.response?.data?.message || 'Erreur lors de la récupération des demandes');
         if (err.response?.status === 403) {
-          setError('Accès non autorisé. Veuillez vous connecter en tant qu\'admin.');
           navigate('/login');
-        } else {
-          setError(err.response?.data?.message || 'Erreur lors de la récupération des demandes. Vérifiez les paramètres de la requête.');
         }
       } finally {
         setLoading(false);
@@ -65,7 +45,7 @@ export default function AdminModificationRequests() {
     }
 
     fetchRequests();
-  }, [token, navigate, requestType]);
+  }, [token, user, isLoading, navigate, requestType]);
 
   const handleAction = async (requestId, action, type) => {
     try {
@@ -79,17 +59,12 @@ export default function AdminModificationRequests() {
       }
 
       const payload = action === 'reject' ? { commentaire: comment || 'Rejet sans commentaire' } : {};
-      const res = await axios.post(`http://localhost:3001${endpoint}`, payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await axiosInstance.post(endpoint, payload);
       alert(res.data.message || `Demande ${action === 'approve' ? 'approuvée' : 'rejetée'} avec succès`);
       setComment('');
-      const updatedRes = await axios.get('http://localhost:3001/api/admin/modification-requests', {
-        headers: { Authorization: `Bearer ${token}` },
+      const updatedRes = await axiosInstance.get('/api/admin/modification-requests', {
         params: { type: requestType, statut: 'en_attente' }
       });
-      console.log('AdminModificationRequests: Réponse updatedRes:', updatedRes.data);
-      console.log('AdminModificationRequests: Updated requests reçus:', updatedRes.data.data.requests);
       if (updatedRes.data.success) {
         setRequests(updatedRes.data.data.requests || []);
       }
@@ -99,7 +74,18 @@ export default function AdminModificationRequests() {
     }
   };
 
-  if (loading) return <p className="text-center">Chargement...</p>;
+  if (loading || isLoading) return <p className="text-center">Chargement...</p>;
+
+  if (!user || !token || user.role !== 'admin') {
+    return (
+      <div>
+        Accès non autorisé.
+        <button onClick={() => navigate('/login')} className="mt-2 text-blue-600 underline">
+          Se connecter
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto p-6">

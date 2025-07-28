@@ -1,11 +1,8 @@
-// C:\reactjs node mongodb\pharmacie-frontend\src\components\Auth\Login.js
-
 import { useState } from 'react';
 import { loginUser } from '../../services/authService';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
-
 
 export default function Login() {
   const [form, setForm] = useState({ email: '', motDePasse: '' });
@@ -28,49 +25,52 @@ export default function Login() {
 
     try {
       const res = await loginUser(form);
-      console.log('🔥 Réponse complète du serveur :', res.data);
+      console.log('🔥 [Login] Réponse complète du serveur :', res.data);
 
-      // ✅ VÉRIFICATION DE LA STRUCTURE DE LA RÉPONSE
       if (!res.data || !res.data.success) {
-        console.error('❌ Réponse invalide:', res.data);
+        console.error('❌ [Login] Réponse invalide:', res.data);
         throw new Error('Réponse invalide du serveur');
       }
 
       if (!res.data.data || !res.data.data.user || !res.data.data.token) {
-        console.error('❌ Données manquantes:', res.data.data);
+        console.error('❌ [Login] Données manquantes:', res.data.data);
         throw new Error('Données utilisateur manquantes');
       }
 
-      // ✅ DÉCODAGE DU TOKEN
       const { user, token } = res.data.data;
+      if (typeof token !== 'string' || !token.includes('.')) {
+        console.error('❌ [Login] Token invalide:', token);
+        throw new Error('Token JWT invalide reçu');
+      }
+
       let decoded;
       try {
         decoded = jwtDecode(token);
-        console.log('🔑 Token décodé:', decoded);
+        console.log('🔑 [Login] Token décodé:', decoded);
       } catch (error) {
-        console.error('❌ Erreur de décodage du token:', error);
+        console.error('❌ [Login] Erreur de décodage du token:', error);
         throw new Error('Token invalide');
       }
 
-      // ✅ VÉRIFIER LE RÔLE PHARMACIE
       if (decoded.role === 'pharmacie') {
         setError('Vous ne pouvez pas vous connecter en tant que pharmacie sur cette page. Veuillez d\'abord vous connecter en tant que client.');
         setLoading(false);
         return;
       }
 
-      // ✅ CONNEXION DE L'UTILISATEUR
-      login(user, token);
-      localStorage.setItem('pharmacyToken', token);
+      console.log('🔑 [Login] Stockage token:', token.slice(0, 10) + '...');
+      localStorage.setItem('token', token);
       localStorage.setItem('userInfo', JSON.stringify(user));
+      localStorage.removeItem('pharmacyToken'); // Nettoyage
+      console.log('🔑 [Login] Token stocké:', localStorage.getItem('token'));
+      console.log('🔑 [Login] User info:', user);
 
-      console.log('🔑 Token stocké:', token);
-      console.log('🔑 User info:', user);
-      const { role } = res.data.data.user;
+      login(token, user); // Ordre correct : token, user
 
-      // ✅ GESTION DU MOT DE PASSE TEMPORAIRE
+      const { role } = user;
+
       if (res.data.motDePasseTemporaire === true) {
-        console.log('⚠️ Mot de passe temporaire détecté - Redirection vers changement');
+        console.log('⚠️ [Login] Mot de passe temporaire détecté - Redirection vers changement');
         navigate('/change-password', {
           state: {
             isTemporary: true,
@@ -81,24 +81,23 @@ export default function Login() {
         return;
       }
 
-      // ✅ REDIRECTION SELON LE RÔLE
-      console.log('🎯 Redirection selon le rôle:', role);
+      console.log('🎯 [Login] Redirection selon le rôle:', role);
       let redirectPath = '/client-dashboard';
 
       if (role === 'admin') {
         redirectPath = '/admin-dashboard';
-        console.log('👑 Redirection vers admin dashboard');
+        console.log('👑 [Login] Redirection vers admin dashboard');
       } else if (role === 'client') {
-        console.log('👤 Redirection vers client dashboard');
+        console.log('👤 [Login] Redirection vers client dashboard');
       } else {
-        console.error('❌ Rôle inconnu:', role);
+        console.error('❌ [Login] Rôle inconnu:', role);
         throw new Error('Rôle utilisateur non reconnu');
       }
 
       navigate(redirectPath, { replace: true });
 
     } catch (err) {
-      console.error('❌ Erreur de connexion:', err);
+      console.error('❌ [Login] Erreur de connexion:', err);
       if (err.response?.data?.code === 'EMAIL_NOT_VERIFIED') {
         setError('Veuillez vérifier votre email avant de vous connecter');
       } else if (err.response?.data?.message) {

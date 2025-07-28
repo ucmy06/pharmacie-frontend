@@ -1,3 +1,5 @@
+// C:\reactjs node mongodb\pharmacie-frontend\src\App.js
+
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import ManageMedicamentImages from './pages/admin/ManageMedicamentImages';
@@ -22,7 +24,12 @@ import PharmacyProfile from './pages/pharmacie/PharmacyProfile';
 import ProtectedRoute from './components/ProtectedRoute';
 import PharmacyProtectedRoute from './components/PharmacyProtectedRoute';
 import ClientProtectedRoute from './components/ClientProtectedRoute';
-
+import AdminConnectDatabase from './pages/admin/AdminConnectDatabase';
+import Medicaments from './pages/Medicaments';
+import Panier from './pages/Panier';
+import PharmaciesProches from './pages/PharmaciesProches';
+import PharmacyMedicaments from './pages/PharmacyMedicaments';
+import AllMedicaments from './pages/admin/AllMedicaments';
 import './App.css';
 
 function App() {
@@ -46,31 +53,30 @@ function App() {
         <Route path="/dashboard" element={<ProtectedDashboard />} />
         <Route path="/admin-dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         <Route path="/client-dashboard" element={<ClientProtectedRoute><ClientDashboard /></ClientProtectedRoute>} />
-        <Route path="/admin/pharmacy/:pharmacyId/manage-medicament-images" element={<ManageMedicamentImages />} />
         <Route path="/admin/modification-requests" element={<ProtectedRoute><AdminModificationRequests /></ProtectedRoute>} />
-        
-        {/* Protection pharmacie */}
-        <Route 
-          path="/pharmacie/dashboard" 
-          element={<PharmacyProtectedRoute><PharmacieDashboard /></PharmacyProtectedRoute>} 
-        />
-        <Route 
-          path="/pharmacie/profil" 
-          element={<PharmacyProtectedRoute><PharmacyProfile /></PharmacyProtectedRoute>} 
-        />
-        <Route
-          path="/pharmacie/connexion"
-          element={
-            <ClientProtectedRoute>
-              <ConnexionPharmacie />
-            </ClientProtectedRoute>
-          }
-        />
+        <Route path="/admin/pharmacies/database" element={<ProtectedRoute><AdminConnectDatabase /></ProtectedRoute>} />
+        <Route path="/pharmacie/dashboard" element={<PharmacyProtectedRoute><PharmacieDashboard /></PharmacyProtectedRoute>} />
+        <Route path="/pharmacie/profil" element={<PharmacyProtectedRoute><PharmacyProfile /></PharmacyProtectedRoute>} />
+        <Route path="/pharmacie/connexion" element={<ClientProtectedRoute><ConnexionPharmacie /></ClientProtectedRoute>} />
         <Route path="/connexion-pharmacie" element={<Navigate to="/pharmacie/connexion" />} />
         <Route path="/pharmacie/change-password" element={<PharmacyProtectedRoute><ChangePharmacyPassword /></PharmacyProtectedRoute>} />
         <Route path="/admin/pharmacy-requests" element={<ProtectedRoute><PharmacyRequestsPage /></ProtectedRoute>} />
-        <Route path="/demande-pharmacie" element={<ClientProtectedRoute><DemandePharmacieForm /> </ClientProtectedRoute>}/>
+        <Route path="/demande-pharmacie" element={<ClientProtectedRoute><DemandePharmacieForm /></ClientProtectedRoute>} />
         <Route path="/ma-demande-pharmacie" element={<ClientProtectedRoute><MaDemandePharmacie /></ClientProtectedRoute>} />
+        <Route path="/medicaments/:pharmacyId" element={<ClientProtectedRoute><Medicaments /></ClientProtectedRoute>} />
+        <Route path="/panier" element={<ClientProtectedRoute><Panier /></ClientProtectedRoute>} />
+        <Route path="/pharmacies" element={<ClientProtectedRoute><PharmaciesProches /></ClientProtectedRoute>} />
+        <Route path="/medicaments/:pharmacyId" element={<PharmacyMedicaments />} />
+
+       <Route path="/admin/medicaments/all" element={<AllMedicaments />} />
+       
+       
+        <Route
+  path="/admin/ManageMedicamentImages"
+  element={<ProtectedRoute><ManageMedicamentImages /></ProtectedRoute>}
+/>
+      
+    
         <Route path="*" element={<div>404 - Page non trouvée</div>} />
       </Routes>
     </Router>

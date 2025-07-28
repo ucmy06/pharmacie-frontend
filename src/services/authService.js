@@ -1,7 +1,11 @@
-// src/services/authService.js
+// C:\reactjs node mongodb\pharmacie-frontend\src\services\authService.js
 import api from './api';
+import axiosInstance from '../utils/axiosConfig';
 
-export const loginUser = (data) => api.post('/auth/login', data);
+export const loginUser = async (credentials) => {
+  const response = await axiosInstance.post('/api/auth/login', credentials);
+  return response;
+};
 export const registerUser = (data) => api.post('/auth/register', data);
 export const registerPharmacie = (data) => api.post('/auth/pharmacie', data);
 export const forgotPassword = (data) => api.post('/auth/forgot-password', data);

@@ -1,5 +1,7 @@
+// C:\reactjs node mongodb\pharmacie-frontend\src\pages\demande\MaDemandePharmacie.jsx
+
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import axiosInstance from '../../utils/axiosConfig'; // Utiliser axiosInstance
 import { useAuth } from '../../hooks/useAuth';
 
 export default function MaDemandePharmacie() {
@@ -11,14 +13,11 @@ export default function MaDemandePharmacie() {
   useEffect(() => {
     const fetchDemande = async () => {
       try {
-        const res = await axios.get(
-          'http://localhost:3001/api/demande-pharmacie/ma-demande',
-          {
-            headers: { Authorization: `Bearer ${token}` }
-          }
-        );
-        setDemande(res.data.data.demandePharmacie);
+        const res = await axiosInstance.get('/api/client/ma-demande-pharmacie');
+        console.log('📋 Réponse serveur:', res.data);
+        setDemande(res.data.data); // Correction: res.data.data au lieu de res.data.data.demandePharmacie
       } catch (err) {
+        console.error('❌ Erreur récupération demande:', err);
         setError(err.response?.data?.message || 'Erreur lors de la récupération de la demande');
       } finally {
         setLoading(false);
@@ -46,7 +45,6 @@ export default function MaDemandePharmacie() {
               : demande.statutDemande === 'rejetee'
               ? 'text-red-600'
               : 'text-yellow-600'
-              
           }
         >
           {demande.statutDemande.replace('_', ' ').toUpperCase()}
@@ -89,37 +87,37 @@ export default function MaDemandePharmacie() {
         <strong>Téléphone :</strong> {demande.informationsPharmacie?.telephonePharmacie || '-'}
       </div>
 
-      {demande.informationsPharmacie?.photoPharmacie && (
-        <div className="mb-4">
-          <strong>Photo de la pharmacie :</strong>
-          <br />
-          <img
-            src={`http://localhost:3001/${demande.informationsPharmacie.photoPharmacie.replace(/\\/g, '/')}`}
-            alt=""
-            className="max-w-full h-auto rounded mt-2"
-          />
-        </div>
-      )}
+        {demande.informationsPharmacie?.photoPharmacie && (
+          <div className="mb-4">
+            <strong>Photo de la pharmacie :</strong>
+            <br />
+            <img
+              src={`http://localhost:3001/${demande.informationsPharmacie.photoPharmacie.cheminFichier.replace(/\\/g, '/')}`}
+              alt="PhotoPharmacie"
+              className="max-w-full h-auto rounded mt-2"
+            />
+          </div>
+        )}
 
-      {demande.informationsPharmacie?.documentsVerification?.length > 0 && (
-        <div>
-          <strong>Documents de vérification :</strong>
-          <ul className="list-disc list-inside mt-2">
-            {demande.informationsPharmacie.documentsVerification.map((doc, index) => (
-              <li key={index}>
-                <a
-                  href={`http://localhost:3001/${doc.cheminFichier.replace(/\\/g, '/')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 underline"
-                >
-                  {doc.nomFichier}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
-}
+        {demande.informationsPharmacie?.documentsVerification?.length > 0 && (
+          <div>
+            <strong>Documents de vérification :</strong>
+            <ul className="list-disc list-inside mt-2">
+              {demande.informationsPharmacie.documentsVerification.map((doc, index) => (
+                <li key={index}>
+                  <a
+                    href={`http://localhost:3001/${doc.cheminFichier.replace(/\\/g, '/')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 underline"
+                  >
+                    {doc.nomFichier}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    );
+  }

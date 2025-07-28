@@ -1,44 +1,23 @@
 // C:\reactjs node mongodb\pharmacie-frontend\src\components\ClientProtectedRoute.jsx
 
 import { Navigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { jwtDecode } from 'jwt-decode';
+import { useAuth } from '../hooks/useAuth';
 
 export default function ClientProtectedRoute({ children }) {
-  const [isChecking, setIsChecking] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { user, token, isLoading } = useAuth();
 
-  useEffect(() => {
-    const token = localStorage.getItem('pharmacyToken');
-    console.log('ClientProtectedRoute: Token found:', !!token);
+  console.log('🔒 [ClientProtectedRoute] État auth:', { user, token: token ? token.slice(0, 10) + '...' : 'NULL', isLoading });
 
-    if (token) {
-      try {
-        const decoded = jwtDecode(token);
-        console.log('ClientProtectedRoute: Decoded token:', decoded);
-        if (decoded.role === 'client') {
-          setIsAuthenticated(true);
-        } else {
-          console.log('ClientProtectedRoute: Non-client role:', decoded.role);
-        }
-      } catch (error) {
-        console.error('ClientProtectedRoute: Error decoding token:', error);
-      }
-    }
+  if (isLoading) {
+    console.log('⏳ [ClientProtectedRoute] Chargement en cours...');
+    return <div>Loading...</div>;
+  }
 
-    const timeout = setTimeout(() => {
-      setIsChecking(false);
-    }, 500);
-
-    return () => clearTimeout(timeout);
-  }, []);
-
-  if (isChecking) return <div>Chargement...</div>;
-
-  if (!isAuthenticated) {
-    console.log('ClientProtectedRoute: Redirecting to /login');
+  if (!token || !user || user.role !== 'client') {
+    console.warn('❌ [ClientProtectedRoute] Accès non autorisé:', { hasToken: !!token, hasUser: !!user, role: user?.role });
     return <Navigate to="/login" />;
   }
 
+  console.log('✅ [ClientProtectedRoute] Accès autorisé pour:', user.email);
   return children;
 }

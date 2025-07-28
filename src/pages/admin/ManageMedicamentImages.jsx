@@ -1,188 +1,178 @@
 // C:\reactjs node mongodb\pharmacie-frontend\src\pages\admin\ManageMedicamentImages.jsx
+
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import axiosInstance from '../../utils/axiosConfig';
 import { useAuth } from '../../hooks/useAuth';
-import { useParams, useNavigate } from 'react-router-dom';
 
 export default function ManageMedicamentImages() {
-  const { token } = useAuth();
-  const { pharmacyId } = useParams(); // Get pharmacyId from URL
+  const { user, token, isLoading } = useAuth();
   const navigate = useNavigate();
-  const [pharmacies, setPharmacies] = useState([]);
   const [medicaments, setMedicaments] = useState([]);
-  const [selectedPharmacy, setSelectedPharmacy] = useState(pharmacyId || '');
   const [selectedMedicament, setSelectedMedicament] = useState('');
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  // Load pharmacies
   useEffect(() => {
-    if (!token) return;
+    if (!token || isLoading) return;
 
-    axios.get('http://localhost:3001/api/admin/pharmacies', {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => setPharmacies(res.data.data.pharmacies))
-      .catch(err => {
-        console.error('Erreur chargement pharmacies', err);
-        setMessage('❌ Erreur lors du chargement des pharmacies');
-      });
-  }, [token]);
-
-  // Load medications for selected pharmacy
-  useEffect(() => {
-    if (!selectedPharmacy) return;
-
-    axios.get(`http://localhost:3001/api/admin/pharmacy/${selectedPharmacy}/medicaments`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => setMedicaments(res.data.data.medicaments))
-      .catch(err => {
-        console.error('Erreur chargement médicaments', err);
+    const fetchMedicaments = async () => {
+      setLoading(true);
+      try {
+        const res = await axiosInstance.get('/api/medicaments/search');
+        // Extraire les noms uniques et leurs images
+        const allMeds = res.data.data.pharmacies.flatMap(pharma => pharma.medicaments);
+        const uniqueDrugs = [...new Set(allMeds.map(med => med.nom))].map(nom => ({
+          nom,
+          images: allMeds.find(med => med.nom === nom).images || []
+        }));
+        setMedicaments(uniqueDrugs);
+      } catch (err) {
+        console.error('❌ Erreur chargement médicaments:', err);
         setMessage('❌ Erreur lors du chargement des médicaments: ' + (err.response?.data?.message || err.message));
-      });
-  }, [selectedPharmacy, token]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleUpload = async () => {
-    if (!selectedPharmacy) {
-      setMessage('❌ Veuillez sélectionner une pharmacie.');
+    fetchMedicaments();
+  }, [token, isLoading]);
+
+  const handleFileChange = (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    if (selectedFiles.length > 3) {
+      setMessage('❌ Maximum 3 images autorisées');
       return;
     }
+    setFiles(selectedFiles);
+  };
+
+  const handleUpload = async () => {
     if (!selectedMedicament) {
       setMessage('❌ Veuillez sélectionner un médicament.');
       return;
     }
-    if (!file) {
-      setMessage('❌ Veuillez sélectionner une image.');
+    if (files.length === 0) {
+      setMessage('❌ Veuillez sélectionner au moins une image.');
       return;
     }
 
+    setLoading(true);
     const formData = new FormData();
-    formData.append('image', file);
+    files.forEach(file => formData.append('images', file));
+    formData.append('nom', selectedMedicament);
 
     try {
-      const res = await axios.post(
-        `http://localhost:3001/api/admin/pharmacy/${selectedPharmacy}/medicament/${selectedMedicament}/image`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data'
-          }
-        }
-      );
-      setMessage(res.data.message);
-      // Refresh medicaments list
-      const updatedMedicaments = await axios.get(
-        `http://localhost:3001/api/admin/pharmacy/${selectedPharmacy}/medicaments`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setMedicaments(updatedMedicaments.data.data.medicaments);
-      setFile(null); // Reset file input
-      setSelectedMedicament(''); // Reset medicament selection
+      const res = await axiosInstance.post('/api/admin/drug/image', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setMessage(res.data.message || '✅ Images téléchargées avec succès');
+      // Mettre à jour les images localement
+      setMedicaments(medicaments.map(med =>
+        med.nom === selectedMedicament
+          ? { ...med, images: res.data.data }
+          : med
+      ));
+      setFiles([]);
+      setSelectedMedicament('');
     } catch (err) {
-      console.error('Erreur upload image', err);
+      console.error('❌ Erreur upload images:', err);
       setMessage('❌ Erreur lors du téléchargement: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setLoading(false);
     }
   };
+
+  if (isLoading) return <div>Chargement...</div>;
+
+  if (!user || !token || user.role !== 'admin') {
+    return (
+      <div>
+        Accès non autorisé.
+        <button onClick={() => navigate('/login')} className="mt-2 text-blue-600 underline">
+          Se connecter
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <h2 className="text-2xl font-bold mb-4">📸 Gérer les images des médicaments</h2>
       {message && <p className={`mb-4 ${message.includes('❌') ? 'text-red-600' : 'text-green-600'}`}>{message}</p>}
+      {loading && <p className="text-gray-600 mb-4">Chargement en cours...</p>}
 
-      {/* Pharmacy Selection */}
       <label className="block mb-4">
-        Sélectionner une pharmacie :
+        Sélectionner un médicament :
         <select
-          value={selectedPharmacy}
-          onChange={(e) => {
-            setSelectedPharmacy(e.target.value);
-            setSelectedMedicament('');
-            setMedicaments([]);
-            navigate(`/admin/pharmacy/${e.target.value}/manage-medicament-images`);
-          }}
+          value={selectedMedicament}
+          onChange={(e) => setSelectedMedicament(e.target.value)}
           className="mt-1 border px-3 py-2 rounded w-full"
         >
-          <option value="">-- Choisir une pharmacie --</option>
-          {pharmacies.map(pharma => (
-            <option key={pharma._id} value={pharma._id}>
-              {pharma.pharmacieInfo.nomPharmacie} ({pharma.pharmacieInfo.baseMedicament || 'Aucune base'})
+          <option value="">-- Choisir un médicament --</option>
+          {medicaments.map((med) => (
+            <option key={med.nom} value={med.nom}>
+              {med.nom}
             </option>
           ))}
         </select>
       </label>
 
-      {/* Medicament Selection */}
-      {selectedPharmacy && (
-        <label className="block mb-4">
-          Sélectionner un médicament :
-          <select
-            value={selectedMedicament}
-            onChange={(e) => setSelectedMedicament(e.target.value)}
-            className="mt-1 border px-3 py-2 rounded w-full"
-          >
-            <option value="">-- Choisir un médicament --</option>
-            {medicaments.map(med => (
-              <option key={med._id} value={med._id}>
-                {med.nom} ({med.nom_generique || 'N/A'})
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
+      <div className="mb-4">
+        <label className="block mb-2">Images du médicament (jusqu'à 3)</label>
+        <input
+          type="file"
+          accept="image/jpeg,image/jpg,image/png"
+          multiple
+          onChange={handleFileChange}
+          className="border px-3 py-2 rounded w-full"
+        />
+      </div>
 
-      {/* File Input */}
-      {selectedPharmacy && (
-        <div className="mb-4">
-          <label className="block mb-2">Image du médicament</label>
-          <input
-            type="file"
-            accept="image/jpeg,image/jpg,image/png"
-            onChange={(e) => setFile(e.target.files[0])}
-            className="border px-3 py-2 rounded w-full"
-          />
-        </div>
-      )}
+      <button
+        onClick={handleUpload}
+        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        disabled={loading}
+      >
+        Télécharger les images
+      </button>
 
-      {/* Upload Button */}
-      {selectedPharmacy && (
-        <button
-          onClick={handleUpload}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          Télécharger l'image
-        </button>
-      )}
-
-      {/* Medicaments List */}
-      {selectedPharmacy && (
-        <>
-          <h3 className="text-xl font-bold mt-6 mb-4">Médicaments</h3>
-          <ul className="space-y-4">
-            {medicaments.map(med => (
-              <li key={med._id} className="p-4 bg-white rounded shadow border">
-                <div className="flex items-center">
-                  {med.image && (
+      <h3 className="text-xl font-bold mt-6 mb-4">Médicaments</h3>
+      <ul className="space-y-4">
+        {medicaments.map((med) => (
+          <li key={med.nom} className="p-4 bg-white rounded shadow border">
+            <div className="flex items-center">
+              {med.images && med.images.length > 0 ? (
+                <div className="flex gap-4 mr-4">
+                  {med.images.map((image, index) => (
                     <img
-                      src={`http://localhost:3001/Uploads/medicaments/${med.image.nomFichier}`}
-                      alt={med.nom}
-                      className="w-16 h-16 object-cover mr-4"
+                      key={index}
+                      src={`http://localhost:3001${image.cheminFichier}`}
+                      alt={`${med.nom} image ${index + 1}`}
+                      className="w-16 h-16 object-cover"
                     />
-                  )}
-                  <div>
-                    <p><strong>{med.nom}</strong> ({med.nom_generique || 'N/A'})</p>
-                    <p>{med.description || 'Aucune description'}</p>
-                    <p>Prix: {med.prix ? `${med.prix} FCFA` : 'N/A'}</p>
-                    <p>Stock: {med.quantite_stock || 'N/A'}</p>
-                    <p>{med.est_sur_ordonnance ? 'Sur ordonnance' : 'Sans ordonnance'}</p>
-                  </div>
+                  ))}
                 </div>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
+              ) : (
+                <div className="w-16 h-16 mr-4 flex items-center justify-center bg-gray-200 text-gray-600">
+                  Aucune image
+                </div>
+              )}
+              <div>
+                <p><strong>{med.nom}</strong></p>
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <button
+        onClick={() => navigate('/admin-dashboard')}
+        className="mt-4 bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700"
+      >
+        Retour au tableau de bord
+      </button>
     </div>
   );
 }

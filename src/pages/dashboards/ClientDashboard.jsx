@@ -1,3 +1,5 @@
+// C:\reactjs node mongodb\pharmacie-frontend\src\pages\dashboards\ClientDashboard.jsx
+
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
 
@@ -27,26 +29,35 @@ export default function ClientDashboard() {
 
         <div className="flex flex-col md:flex-row gap-4 mt-6 flex-wrap">
           <Link
-            to="/demande-pharmacie"
+            to="/pharmacies"
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-center"
           >
-            🏥 Faire une demande de pharmacie
+            🏥 Voir les pharmacies proches
           </Link>
-
+          <Link
+            to="/panier"
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-center"
+          >
+            🛒 Voir mon panier
+          </Link>
+          <Link
+            to="/demande-pharmacie"
+            className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 text-center"
+          >
+            📝 Faire une demande de pharmacie
+          </Link>
           <Link
             to="/ma-demande-pharmacie"
-            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-center"
+            className="bg-teal-600 text-white px-4 py-2 rounded hover:bg-teal-700 text-center"
           >
             📄 Voir ma demande
           </Link>
-
           <Link
             to="/pharmacie/connexion"
-            className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 text-center"
+            className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 text-center"
           >
             🔑 Connexion à ma pharmacie
           </Link>
-
           <button
             onClick={handleLogout}
             className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"

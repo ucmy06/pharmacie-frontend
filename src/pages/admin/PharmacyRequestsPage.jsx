@@ -1,163 +1,198 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
+import { useState, useEffect } from 'react';
+import axiosInstance from '../../utils/axiosConfig';
 import { useAuth } from '../../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 export default function PharmacyRequestsPage() {
-  const { token } = useAuth();
+  const { user, token, isLoading } = useAuth();
   const [requests, setRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('🔍 [PharmacyRequestsPage] État auth:', { user, token: token ? token.slice(0, 10) + '...' : 'NULL', isLoading });
     const fetchRequests = async () => {
-      if (!token) return;
-
+      setLoading(true);
       try {
-        const response = await axios.get(
-          'http://localhost:3001/api/admin/pharmacy-requests',
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        console.log('PharmacyRequestsPage: Réponse fetchRequests:', response.data);
-        console.log('PharmacyRequestsPage: Requests reçus:', response.data.data?.requests || []);
-        setRequests(response.data.data?.requests || []);
-      } catch (error) {
-        console.error('Erreur lors du chargement des demandes :', error);
+        console.log('📋 [PharmacyRequestsPage] Récupération des demandes avec token:', token?.slice(0, 10) + '...');
+        const response = await axiosInstance.get('/api/admin/pharmacy-requests', {
+          params: { statut: 'en_attente', page: 1, limit: 10 },
+        });
+        console.log('✅ [PharmacyRequestsPage] Réponse brute:', JSON.stringify(response.data, null, 2));
+        if (!response.data.success) {
+          throw new Error(response.data.message || 'Échec de la récupération des demandes');
+        }
+        const requestsData = Array.isArray(response.data.data) ? response.data.data : response.data.data?.requests || [];
+        console.log('✅ [PharmacyRequestsPage] Demandes extraites:', requestsData);
+        setRequests(requestsData);
+      } catch (err) {
+        console.error('❌ [PharmacyRequestsPage] Erreur lors du chargement des demandes:', err);
+        setError(err.message || 'Erreur lors du chargement des demandes');
       } finally {
         setLoading(false);
       }
     };
+    if (token && user?.role === 'admin' && !isLoading) {
+      fetchRequests();
+    } else {
+      console.warn('⚠️ [PharmacyRequestsPage] Accès bloqué:', { user, token, isLoading });
+    }
+  }, [token, user, isLoading]);
 
-    fetchRequests();
-  }, [token]);
-
-  const handleUpdateRequest = async (userId, newStatut) => {
+  const handleAction = async (requestId, action) => {
+    setLoading(true);
     try {
-      let url = '';
-      let data = {};
-
-      if (newStatut === 'approuvee') {
-        url = `http://localhost:3001/api/admin/pharmacy-requests/${userId}/approve`;
-        data = { commentaire: 'Demande approuvée' };
-      } else if (newStatut === 'rejetee') {
-        const commentaire = prompt("Commentaire pour le rejet :");
-        if (!commentaire) return alert("Commentaire requis !");
-        url = `http://localhost:3001/api/admin/pharmacy-requests/${userId}/reject`;
-        data = { commentaire };
-      }
-
-      // Utiliser POST au lieu de PUT
-      await axios.post(url, data, {
-        headers: { Authorization: `Bearer ${token}` },
+      console.log(`🔄 [PharmacyRequestsPage] Action ${action} pour demande:`, requestId);
+      const response = await axiosInstance.post(`/api/admin/pharmacy-requests/${requestId}/${action}`, {
+        commentaire: action === 'approve' ? 'Demande approuvée' : 'Demande rejetée - Veuillez vérifier les informations fournies.',
       });
-
-      // Mettre à jour l'état local
-      setRequests((prev) =>
-        prev.map((req) =>
-          req._id === userId
-            ? {
-                ...req,
-                demandePharmacie: {
-                  ...req.demandePharmacie,
-                  statutDemande: newStatut,
-                },
-              }
-            : req
-        )
-      );
-
-      alert(`Demande ${newStatut === 'approuvee' ? 'approuvée' : 'rejetée'} avec succès !`);
-      
-    } catch (error) {
-      console.error('Erreur mise à jour du statut :', error);
-      alert('Erreur lors de la mise à jour: ' + (error.response?.data?.message || error.message));
+      console.log(`✅ [PharmacyRequestsPage] Demande ${action}:`, response.data);
+      setRequests((prev) => prev.filter((req) => req._id !== requestId));
+    } catch (err) {
+      console.error(`❌ [PharmacyRequestsPage] Erreur action ${action}:`, err);
+      setError(err.response?.data?.message || `Erreur lors de l'action ${action}`);
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (loading) return <p>Chargement...</p>;
+  if (isLoading) {
+    console.log('⏳ [PharmacyRequestsPage] Chargement en cours...');
+    return <div>Chargement des données...</div>;
+  }
+
+  if (!user || !token || user.role !== 'admin') {
+    console.error('🚫 [PharmacyRequestsPage] Accès non autorisé:', {
+      hasUser: !!user,
+      hasToken: !!token,
+      role: user?.role,
+    });
+    return (
+      <div>
+        Accès non autorisé.
+        <button
+          onClick={() => navigate('/login')}
+          className="mt-2 text-blue-600 underline"
+        >
+          Se connecter
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold mb-6">📋 Demandes d'intégration de pharmacies</h1>
-      {requests.length === 0 ? (
-        <p>Aucune demande en attente.</p>
-      ) : (
-        <ul className="space-y-6">
-          {requests.map((req) => {
-            const info = req.demandePharmacie?.informationsPharmacie || {};
-            const photo = info.photoPharmacie || null;
-            const docs = info.documentsVerification || [];
+    <div className="min-h-screen bg-gray-100 p-6">
+      <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-6">
+        <h1 className="text-2xl font-bold text-green-700 mb-4">
+          📋 Gérer les demandes de pharmacies
+        </h1>
 
-            return (
-              <li key={req._id} className="border rounded p-4 bg-white shadow">
-                <p><strong>Pharmacie :</strong> {info.nomPharmacie || 'N/A'}</p>
-                <p><strong>Email :</strong> {info.emailPharmacie || req.email}</p>
-                <p><strong>Email utilisateur :</strong> {req.email}</p>
-                <p><strong>Responsable :</strong> {req.prenom} {req.nom}</p>
-                <p><strong>Téléphone utilisateur :</strong> {req.telephone}</p>
-                <p><strong>Téléphone :</strong> {info.telephonePharmacie || req.telephone}</p>
-                <p><strong>Adresse :</strong> {info.adresseGoogleMaps}</p>
-                <p><strong>Statut de la demande :</strong> <span className="font-semibold">{req.demandePharmacie?.statutDemande || 'en attente'}</span></p>
+        {error && <p className="text-red-600 mb-4">{error}</p>}
 
-                {photo && (
-                  <div className="mt-3">
-                    <strong>📸 Photo de la pharmacie :</strong><br />
-                    <button
-                      onClick={() => {
-                        const cheminFichier = photo.cheminFichier?.replace(/\\/g, '/');
-                        if (cheminFichier) {
-                          window.open(`http://localhost:3001/${cheminFichier}`, '_blank');
-                        }
-                      }}
-                      className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-                    >
-                      Consulter la photo
-                    </button>
+        {loading && <p className="text-gray-600 mb-4">Chargement en cours...</p>}
+
+        <ul className="space-y-4">
+          {requests.length > 0 ? (
+            requests.map((request) => (
+              <li key={request._id} className="p-4 border rounded">
+                <p><strong>Utilisateur :</strong> {request.prenom} {request.nom}</p>
+                <p><strong>Email utilisateur :</strong> {request.email}</p>
+                <p><strong>Téléphone utilisateur :</strong> {request.telephone}</p>
+                <p><strong>Pharmacie :</strong> {request.informationsPharmacie?.nomPharmacie || 'N/A'}</p>
+                <p><strong>Adresse :</strong> {request.informationsPharmacie?.adresseGoogleMaps ? (
+                  <a
+                    href={request.informationsPharmacie.adresseGoogleMaps}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 underline"
+                  >
+                    Voir sur Google Maps
+                  </a>
+                ) : 'N/A'}</p>
+                <p><strong>Email pharmacie :</strong> {request.informationsPharmacie?.emailPharmacie || 'N/A'}</p>
+                <p><strong>Téléphone pharmacie :</strong> {request.informationsPharmacie?.telephonePharmacie || 'N/A'}</p>
+                <p><strong>Statut :</strong> {request.statutDemande.replace('_', ' ').toUpperCase()}</p>
+                <p><strong>Date :</strong> {request.dateDemande ? new Date(request.dateDemande).toLocaleDateString() : 'N/A'}</p>
+                {request.informationsPharmacie?.photoPharmacie?.cheminFichier && (
+                  <div className="mb-4">
+                    <strong>Photo de la pharmacie :</strong>
+                    <br />
+                    <img
+                      src={`http://localhost:3001/${request.informationsPharmacie.photoPharmacie.cheminFichier.replace(/\\/g, '/')}`}
+                      alt="Photo de la pharmacie"
+                      className="max-w-full h-auto rounded mt-2"
+                    />
+                    <p>
+                      <a
+                        href={`http://localhost:3001/${request.informationsPharmacie.photoPharmacie.cheminFichier.replace(/\\/g, '/')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 underline"
+                      >
+                        Télécharger la photo
+                      </a>
+                    </p>
                   </div>
                 )}
-
-                {docs.length > 0 && (
-                  <div className="mt-4">
-                    <strong>📄 Documents justificatifs :</strong>
+                {request.informationsPharmacie?.documentsVerification?.length > 0 && (
+                  <div className="mb-4">
+                    <strong>Documents de vérification :</strong>
                     <ul className="list-disc list-inside mt-2">
-                      {docs.map((doc, i) => {
-                        const docPath = doc.cheminFichier?.replace(/\\/g, '/');
-                        return (
-                          <li key={i}>
-                            <button
-                              onClick={() => window.open(`http://localhost:3001/${docPath}`, '_blank')}
-                              className="text-blue-600 underline hover:text-blue-800"
-                            >
-                              Consulter le document : {doc.nomFichier}
-                            </button>
-                          </li>
-                        );
-                      })}
+                      {request.informationsPharmacie.documentsVerification.map((doc, index) => (
+                        <li key={index}>
+                          <a
+                            href={`http://localhost:3001/${doc.cheminFichier.replace(/\\/g, '/')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 underline"
+                          >
+                            {doc.nomFichier}
+                          </a>
+                          {(doc.nomFichier.endsWith('.png') || doc.nomFichier.endsWith('.jpg') || doc.nomFichier.endsWith('.jpeg')) && (
+                            <div className="mt-2">
+                              <img
+                                src={`http://localhost:3001/${doc.cheminFichier.replace(/\\/g, '/')}`}
+                                alt={doc.nomFichier}
+                                className="max-w-full h-auto rounded"
+                              />
+                            </div>
+                          )}
+                        </li>
+                      ))}
                     </ul>
                   </div>
                 )}
-
-                <div className="mt-4 flex gap-4">
+                <div className="mt-2 flex gap-2">
                   <button
-                    onClick={() => handleUpdateRequest(req._id, 'approuvee')}
-                    className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                    onClick={() => handleAction(request._id, 'approve')}
+                    disabled={loading}
+                    className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
                   >
-                    ✅ Valider
+                    Approuver
                   </button>
                   <button
-                    onClick={() => handleUpdateRequest(req._id, 'rejetee')}
-                    className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+                    onClick={() => handleAction(request._id, 'reject')}
+                    disabled={loading}
+                    className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
                   >
-                    ❌ Rejeter
+                    Rejeter
                   </button>
                 </div>
               </li>
-            );
-          })}
+            ))
+          ) : (
+            <li>Aucune demande en attente.</li>
+          )}
         </ul>
-      )}
+
+        <button
+          onClick={() => navigate('/admin-dashboard')}
+          className="mt-4 bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700"
+        >
+          Retour au tableau de bord
+        </button>
+      </div>
     </div>
   );
 }
