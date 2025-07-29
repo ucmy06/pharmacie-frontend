@@ -1,109 +1,149 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import axiosInstance from '../utils/axiosConfig';
-import { useAuth } from '../hooks/useAuth';
+// src/components/Medicaments.jsx
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useParams } from 'react-router-dom';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-export default function Medicaments() {
+const Medicaments = () => {
   const { pharmacyId } = useParams();
-  const navigate = useNavigate();
-  const { state } = useLocation();
-  const { user, token, isLoading } = useAuth();
   const [medicaments, setMedicaments] = useState([]);
-  const [pharmacyName, setPharmacyName] = useState(state?.pharmacyName || 'Pharmacie');
+  const [filteredMedicaments, setFilteredMedicaments] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const API_URL = 'http://localhost:3001';
+
+  const addToCart = async (medicament) => {
+    try {
+      const response = await axios.post(
+        `${API_URL}/api/cart/add`,
+        {
+          medicamentId: medicament._id,
+          pharmacyId: pharmacyId,
+          quantity: 1,
+        },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        }
+      );
+      console.log('🔍 [addToCart] Réponse:', response.data);
+      toast.success(response.data.message);
+    } catch (error) {
+      console.error('❌ [addToCart] Erreur:', error);
+      if (error.response?.status === 404) {
+        toast.error('Ressource non trouvée. Vérifiez l\'endpoint ou les données.');
+      } else if (error.response?.status === 400) {
+        toast.error(error.response.data.message || 'Requête invalide.');
+      } else {
+        toast.error('Erreur lors de l\'ajout au panier');
+      }
+    }
+  };
 
   useEffect(() => {
-    if (!token || isLoading) {
-      setError('Veuillez vous connecter pour voir les médicaments');
-      setLoading(false);
-      return;
-    }
-
     const fetchMedicaments = async () => {
       try {
-        console.log(`🔍 [fetchMedicaments] Récupération des médicaments pour pharmacie ${pharmacyId}`);
-        const response = await axiosInstance.get(`/api/medicaments/pharmacy/${pharmacyId}/medicaments`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+        const response = await axios.get(`${API_URL}/api/medicaments/pharmacy/${pharmacyId}/medicaments`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         });
-
-        console.log('🔍 [fetchMedicaments] Réponse:', response.data);
-
-        if (response.data.success) {
-          setMedicaments(response.data.data.medicaments);
-        } else {
-          setError(response.data.message || 'Erreur lors du chargement des médicaments');
-        }
-      } catch (err) {
-        console.error('❌ Erreur chargement médicaments:', err);
-        setError('Erreur serveur: ' + (err.response?.data?.message || err.message));
-      } finally {
+        console.log('🔍 [fetchMedicaments] Réponse complète:', response.data);
+        console.log(
+          '🔍 [fetchMedicaments] Détails des médicaments:',
+          response.data.data.medicaments.map((med) => ({
+            nom: med.nom,
+            images: med.images?.length ? med.images : 'Aucune image',
+          }))
+        );
+        setMedicaments(response.data.data.medicaments);
+        setFilteredMedicaments(response.data.data.medicaments);
+        setLoading(false);
+      } catch (error) {
+        console.error('❌ [fetchMedicaments] Erreur:', error);
+        toast.error('Erreur lors du chargement des médicaments');
         setLoading(false);
       }
     };
-
     fetchMedicaments();
-  }, [pharmacyId, token, isLoading]);
+  }, [pharmacyId]);
 
-  if (loading) {
-    return <div className="p-6 text-lg text-gray-800">Chargement...</div>;
-  }
+  useEffect(() => {
+    if (searchTerm.trim()) {
+      const filtered = medicaments.filter((med) =>
+        med.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (med.nom_generique && med.nom_generique.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+      setFilteredMedicaments(filtered);
+    } else {
+      setFilteredMedicaments(medicaments);
+    }
+  }, [searchTerm, medicaments]);
 
-  if (error) {
-    return <p className="p-6 text-red-600">{error}</p>;
-  }
+  if (loading) return <div>Chargement...</div>;
+  if (!filteredMedicaments.length && !searchTerm) return <div>Aucun médicament trouvé</div>;
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <h1 className="text-2xl font-semibold mb-6 text-gray-800">
-        Médicaments de {pharmacyName}
-      </h1>
-      <button
-        onClick={() => navigate('/pharmacies')}
-        className="mb-4 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg"
-      >
-        Retour aux pharmacies
-      </button>
-      {medicaments.length === 0 ? (
-        <p className="text-gray-600">Aucun médicament trouvé pour cette pharmacie.</p>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {medicaments.map((med) => (
-            <div key={med._id} className="bg-white rounded-lg shadow-md p-4">
-              <div className="flex items-center">
-                {med.images && med.images.length > 0 ? (
-                  <div className="flex gap-4 mr-4">
-                    {med.images.map((image, index) => (
-                      <img
-                        key={index}
-                        src={`http://localhost:3001${image.cheminFichier}`}
-                        alt={`${med.nom} image ${index + 1}`}
-                        className="w-16 h-16 object-cover"
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="w-16 h-16 mr-4 flex items-center justify-center bg-gray-200 text-gray-600">
-                    Aucune image
-                  </div>
-                )}
-                <div>
-                  <h2 className="text-lg font-bold text-gray-800">{med.nom}</h2>
-                  {med.nom_generique && <p className="text-gray-600">Générique: {med.nom_generique}</p>}
-                  <p className="text-gray-600">{med.description || 'Aucune description'}</p>
-                  <p className="text-gray-600">Prix: {med.prix} Francs</p>
-                  <p className="text-gray-600">Stock: {med.quantite_stock}</p>
-                  <p className="text-gray-600">
-                    {med.est_sur_ordonnance ? 'Sur ordonnance' : 'Sans ordonnance'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+    <div className="container mx-auto p-4">
+      <ToastContainer />
+      <h2 className="text-2xl font-bold mb-4">Médicaments disponibles</h2>
+      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Rechercher un médicament..."
+          className="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+        />
+      </div>
+      {filteredMedicaments.length === 0 && searchTerm && (
+        <div className="text-red-600 mb-4">Aucun médicament trouvé pour "{searchTerm}"</div>
       )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        {filteredMedicaments.map((med) => (
+          <div key={med._id} className="border p-4 rounded-lg flex items-center">
+            {med.images && med.images.length > 0 && med.images[0].nomFichier ? (
+              <img
+                src={`${API_URL}/api/images/medicaments/${med.images[0].nomFichier}`}
+                alt={med.nom}
+                className="w-16 h-16 object-cover mr-4"
+                onError={(e) => {
+                  console.error(
+                    `❌ [Medicaments] Échec chargement image: ${API_URL}/api/images/medicaments/${med.images[0].nomFichier}`,
+                    e
+                  );
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
+                }}
+              />
+            ) : (
+              <div className="w-16 h-16 bg-gray-200 mr-4 flex items-center justify-center text-gray-600">
+                Aucune image
+              </div>
+            )}
+            <div>
+              <h3 className="text-lg font-semibold">{med.nom}</h3>
+              <p>Prix: {med.prix} FCFA</p>
+              <p>Stock: {med.quantite_stock}</p>
+              <p>{med.est_sur_ordonnance ? 'Sur ordonnance' : 'Sans ordonnance'}</p>
+              <p>Catégorie: {med.categorie || 'Non spécifiée'}</p>
+              <p>Forme: {med.forme || 'Non spécifiée'}</p>
+              {med.date_peremption && (
+                <p>Date de péremption: {new Date(med.date_peremption).toLocaleDateString()}</p>
+              )}
+              {med.dosage && <p>Dosage: {med.dosage}</p>}
+              {med.code_barre && <p>Code barre: {med.code_barre}</p>}
+              <button
+                onClick={() => addToCart(med)}
+                className="mt-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                disabled={med.quantite_stock === 0}
+              >
+                Ajouter au panier
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
-}
+};
+
+export default Medicaments;

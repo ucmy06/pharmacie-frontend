@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const API_URL = 'http://localhost:3001';
 
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
-  const R = 6371e3; // Rayon de la Terre en mètres
+  const R = 6371e3;
   const φ1 = (lat1 * Math.PI) / 180;
   const φ2 = (lat2 * Math.PI) / 180;
   const Δφ = ((lat2 - lat1) * Math.PI) / 180;
@@ -14,7 +16,7 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
             Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c; // Distance en mètres
+  return R * c;
 };
 
 export default function PharmaciesProches() {
@@ -32,6 +34,7 @@ export default function PharmaciesProches() {
     const token = localStorage.getItem('token');
     if (!token) {
       setError('Veuillez vous connecter pour voir les pharmacies');
+      toast.error('Veuillez vous connecter pour voir les pharmacies');
       setLoading(false);
       return;
     }
@@ -44,30 +47,32 @@ export default function PharmaciesProches() {
         (err) => {
           console.error('❌ Erreur géolocalisation:', err);
           setError('Erreur lors de la récupération de votre position');
+          toast.error('Erreur lors de la récupération de votre position');
           setLoading(false);
         }
       );
     } else {
       setError('Géolocalisation non supportée par votre navigateur');
+      toast.error('Géolocalisation non supportée par votre navigateur');
       setLoading(false);
     }
 
     axios.get(`${API_URL}/api/pharmacies`, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+      headers: { Authorization: `Bearer ${token}` }
     })
       .then((response) => {
         if (response.data.success) {
           setPharmacies(response.data.data.pharmacies);
         } else {
           setError(response.data.message || 'Erreur lors du chargement');
+          toast.error(response.data.message || 'Erreur lors du chargement');
         }
         setLoading(false);
       })
       .catch((err) => {
         console.error('❌ Erreur chargement pharmacies:', err);
         setError('Erreur serveur: ' + (err.response?.data?.message || err.message));
+        toast.error('Erreur serveur: ' + (err.response?.data?.message || err.message));
         setLoading(false);
       });
   }, []);
@@ -75,6 +80,7 @@ export default function PharmaciesProches() {
   const handleSearch = async () => {
     if (!searchTerm.trim()) {
       setSearchError('Veuillez entrer un nom de médicament');
+      toast.error('Veuillez entrer un nom de médicament');
       setSearchResults([]);
       return;
     }
@@ -101,11 +107,13 @@ export default function PharmaciesProches() {
         setSearchResults(results);
       } else {
         setSearchError(response.data.message || 'Erreur lors de la recherche');
+        toast.error(response.data.message || 'Erreur lors de la recherche');
         setSearchResults([]);
       }
     } catch (err) {
       console.error('❌ Erreur recherche médicaments:', err);
       setSearchError('Erreur serveur: ' + (err.response?.data?.message || err.message));
+      toast.error('Erreur serveur: ' + (err.response?.data?.message || err.message));
       setSearchResults([]);
     } finally {
       setSearchLoading(false);
@@ -115,19 +123,16 @@ export default function PharmaciesProches() {
   const getCoordinates = (adresse) => {
     if (!adresse) return null;
 
-    // Format 1: Google Maps URL avec q=lat,lng
     const matchGoogle = adresse.match(/q=([-.\d]+),([-.\d]+)/);
     if (matchGoogle) {
       return { latitude: parseFloat(matchGoogle[1]), longitude: parseFloat(matchGoogle[2]) };
     }
 
-    // Format 2: Google Maps Embed iframe
     const matchEmbed = adresse.match(/!2d([-.\d]+)!3d([-.\d]+)/);
     if (matchEmbed) {
       return { latitude: parseFloat(matchEmbed[2]), longitude: parseFloat(matchEmbed[1]) };
     }
 
-    // Format 3: URL raccourcie maps.app.goo.gl
     if (adresse.includes('maps.app.goo.gl')) {
       console.warn(`URL raccourcie non supportée: ${adresse}`);
       return null;
@@ -152,14 +157,18 @@ export default function PharmaciesProches() {
   }
 
   if (error) {
-    return <p className="p-6 text-red-600">{error}</p>;
+    return (
+      <div className="p-6">
+        <p className="text-red-600">{error}</p>
+      </div>
+    );
   }
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
+      <ToastContainer />
       <h1 className="text-2xl font-semibold mb-6 text-gray-800">Pharmacies à proximité</h1>
 
-      {/* Champ de recherche et bouton */}
       <div className="mb-6 flex flex-col sm:flex-row gap-4">
         <input
           type="text"
@@ -177,7 +186,6 @@ export default function PharmaciesProches() {
         </button>
       </div>
 
-      {/* Résultats de recherche */}
       {searchError && <p className="text-red-600 mb-4">{searchError}</p>}
       {searchResults.length > 0 && (
         <div className="mb-8">
@@ -189,9 +197,10 @@ export default function PharmaciesProches() {
                   <div className="flex items-center">
                     {med.images && med.images.length > 0 ? (
                       <img
-                        src={`${API_URL}${med.images[0].cheminFichier}`}
+                        src={`${API_URL}/api/images/medicaments/${med.images[0].nomFichier}`}
                         alt={med.nom}
                         className="w-16 h-16 object-cover mr-4"
+                        onError={(e) => console.error(`❌ [PharmaciesProches] Échec chargement image: ${API_URL}/api/images/medicaments/${med.images[0].nomFichier}`, e)}
                       />
                     ) : (
                       <div className="w-16 h-16 mr-4 flex items-center justify-center bg-gray-200 text-gray-600">
@@ -202,10 +211,10 @@ export default function PharmaciesProches() {
                       <h3 className="text-lg font-bold text-gray-800">{med.nom}</h3>
                       {med.nom_generique && <p className="text-gray-600">Générique: {med.nom_generique}</p>}
                       <p className="text-gray-600">Pharmacie: {result.pharmacie.nom}</p>
-                      <p className="text-gray-600">Prix: {med.prix} Francs</p>
+                      <p className="text-gray-600">Prix: {med.prix} FCFA</p>
                       <p className="text-gray-600">Stock: {med.quantite_stock}</p>
                       <button
-                        onClick={() => navigate(`/medicaments/${result.pharmacie.id}`)}
+                        onClick={() => navigate(`/medicaments/${result.pharmacie.id}`, { state: { pharmacyName: result.pharmacie.nom } })}
                         className="mt-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
                       >
                         Voir tous les médicaments de cette pharmacie
@@ -219,7 +228,6 @@ export default function PharmaciesProches() {
         </div>
       )}
 
-      {/* Liste des pharmacies */}
       <h2 className="text-xl font-semibold mb-4 text-gray-800">Pharmacies à proximité</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {sortedPharmacies.map((pharma) => {
@@ -229,15 +237,36 @@ export default function PharmaciesProches() {
             : 'Inconnue';
           return (
             <div key={pharma._id} className="bg-white rounded-lg shadow-md p-4">
-              <h2 className="text-lg font-bold mb-2 text-gray-800">{pharma.pharmacieInfo.nomPharmacie || `${pharma.nom} ${pharma.prenom}`}</h2>
-              <p className="text-gray-600">Distance: {distance} km</p>
-              <p className="text-gray-600">Adresse: {pharma.pharmacieInfo.adresseGoogleMaps || 'Non spécifiée'}</p>
-              <button
-                onClick={() => navigate(`/medicaments/${pharma._id}`)}
-                className="mt-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
-              >
-                Voir les médicaments
-              </button>
+              <div className="flex items-center">
+                {pharma.pharmacieInfo.photoPharmacie?.nomFichier ? (
+                  <img
+                    src={`${API_URL}/api/images/pharmacies/${pharma.pharmacieInfo.photoPharmacie.nomFichier}`}
+                    alt={pharma.pharmacieInfo.nomPharmacie}
+                    className="w-16 h-16 object-cover mr-4 rounded-lg"
+                    onError={(e) => console.error(`❌ [PharmaciesProches] Échec chargement image: ${API_URL}/api/images/pharmacies/${pharma.pharmacieInfo.photoPharmacie.nomFichier}`, e)}
+                  />
+                ) : (
+                  <div className="w-16 h-16 mr-4 flex items-center justify-center bg-gray-200 text-gray-600 rounded-lg">
+                    Aucune photo
+                  </div>
+                )}
+                <div>
+                  <h2
+                    className="text-lg font-bold mb-2 text-gray-800 cursor-pointer hover:underline"
+                    onClick={() => navigate(`/pharmacies/${pharma._id}/profil`, { state: { pharmacyName: pharma.pharmacieInfo.nomPharmacie } })}
+                  >
+                    {pharma.pharmacieInfo.nomPharmacie || `${pharma.nom} ${pharma.prenom}`}
+                  </h2>
+                  <p className="text-gray-600">Distance: {distance} km</p>
+                  <p className="text-gray-600">Adresse: {pharma.pharmacieInfo.adresseGoogleMaps || 'Non spécifiée'}</p>
+                  <button
+                    onClick={() => navigate(`/medicaments/${pharma._id}`, { state: { pharmacyName: pharma.pharmacieInfo.nomPharmacie } })}
+                    className="mt-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                  >
+                    Voir les médicaments
+                  </button>
+                </div>
+              </div>
             </div>
           );
         })}

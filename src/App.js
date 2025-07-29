@@ -1,7 +1,7 @@
-// C:\reactjs node mongodb\pharmacie-frontend\src\App.js
-
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './hooks/useAuth';
+import Layout from './components/Layout';
 import ManageMedicamentImages from './pages/admin/ManageMedicamentImages';
 import AdminModificationRequests from './pages/admin/AdminModificationRequests';
 import Login from './components/Auth/Login';
@@ -20,16 +20,20 @@ import DemandePharmacieForm from './pages/demande/DemandePharmacieForm';
 import MaDemandePharmacie from './pages/demande/MaDemandePharmacie';
 import ConnexionPharmacie from './pages/pharmacie/ConnexionPharmacie';
 import ChangePharmacyPassword from './pages/pharmacie/ChangePharmacyPassword';
-import PharmacyProfile from './pages/pharmacie/PharmacyProfile';
+import PharmaciesProfile from './pages/PharmaciesProfile';
 import ProtectedRoute from './components/ProtectedRoute';
 import PharmacyProtectedRoute from './components/PharmacyProtectedRoute';
 import ClientProtectedRoute from './components/ClientProtectedRoute';
 import AdminConnectDatabase from './pages/admin/AdminConnectDatabase';
 import Medicaments from './pages/Medicaments';
 import Panier from './pages/Panier';
+import PharmacyProfile from './pages/pharmacie/PharmacyProfile';
 import PharmaciesProches from './pages/PharmaciesProches';
 import PharmacyMedicaments from './pages/PharmacyMedicaments';
 import AllMedicaments from './pages/admin/AllMedicaments';
+import MedicamentsList from './pages/MedicamentsList';
+
+
 import './App.css';
 
 function App() {
@@ -41,45 +45,45 @@ function App() {
   }, []);
 
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
-        <Route path="/resend-verification" element={<ResendVerificationPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-        <Route path="/dashboard" element={<ProtectedDashboard />} />
-        <Route path="/admin-dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-        <Route path="/client-dashboard" element={<ClientProtectedRoute><ClientDashboard /></ClientProtectedRoute>} />
-        <Route path="/admin/modification-requests" element={<ProtectedRoute><AdminModificationRequests /></ProtectedRoute>} />
-        <Route path="/admin/pharmacies/database" element={<ProtectedRoute><AdminConnectDatabase /></ProtectedRoute>} />
-        <Route path="/pharmacie/dashboard" element={<PharmacyProtectedRoute><PharmacieDashboard /></PharmacyProtectedRoute>} />
-        <Route path="/pharmacie/profil" element={<PharmacyProtectedRoute><PharmacyProfile /></PharmacyProtectedRoute>} />
-        <Route path="/pharmacie/connexion" element={<ClientProtectedRoute><ConnexionPharmacie /></ClientProtectedRoute>} />
-        <Route path="/connexion-pharmacie" element={<Navigate to="/pharmacie/connexion" />} />
-        <Route path="/pharmacie/change-password" element={<PharmacyProtectedRoute><ChangePharmacyPassword /></PharmacyProtectedRoute>} />
-        <Route path="/admin/pharmacy-requests" element={<ProtectedRoute><PharmacyRequestsPage /></ProtectedRoute>} />
-        <Route path="/demande-pharmacie" element={<ClientProtectedRoute><DemandePharmacieForm /></ClientProtectedRoute>} />
-        <Route path="/ma-demande-pharmacie" element={<ClientProtectedRoute><MaDemandePharmacie /></ClientProtectedRoute>} />
-        <Route path="/medicaments/:pharmacyId" element={<ClientProtectedRoute><Medicaments /></ClientProtectedRoute>} />
-        <Route path="/panier" element={<ClientProtectedRoute><Panier /></ClientProtectedRoute>} />
-        <Route path="/pharmacies" element={<ClientProtectedRoute><PharmaciesProches /></ClientProtectedRoute>} />
-        <Route path="/medicaments/:pharmacyId" element={<PharmacyMedicaments />} />
+    <AuthProvider>
+      <Router>
+        <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+          
+            <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
+            <Route path="/resend-verification" element={<ResendVerificationPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+            <Route element={<Layout />}>
 
-       <Route path="/admin/medicaments/all" element={<AllMedicaments />} />
-       
-       
-        <Route
-  path="/admin/ManageMedicamentImages"
-  element={<ProtectedRoute><ManageMedicamentImages /></ProtectedRoute>}
-/>
-      
-    
-        <Route path="*" element={<div>404 - Page non trouvée</div>} />
-      </Routes>
-    </Router>
+            <Route path="/dashboard" element={<ProtectedDashboard />} />
+            <Route path="/admin-dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/client-dashboard" element={<ClientProtectedRoute><ClientDashboard /></ClientProtectedRoute>} />
+            <Route path="/admin/modification-requests" element={<ProtectedRoute><AdminModificationRequests /></ProtectedRoute>} />
+            <Route path="/admin/pharmacies/database" element={<ProtectedRoute><AdminConnectDatabase /></ProtectedRoute>} />
+            <Route path="/pharmacie/dashboard" element={<PharmacyProtectedRoute><PharmacieDashboard /></PharmacyProtectedRoute>} />
+            <Route path="/pharmacie/profil" element={<PharmacyProtectedRoute><PharmacyProfile /></PharmacyProtectedRoute>} />
+            <Route path="/pharmacie/connexion" element={<ClientProtectedRoute><ConnexionPharmacie /></ClientProtectedRoute>} />
+            <Route path="/connexion-pharmacie" element={<Navigate to="/pharmacie/connexion" />} />
+            <Route path="/pharmacie/change-password" element={<PharmacyProtectedRoute><ChangePharmacyPassword /></PharmacyProtectedRoute>} />
+            <Route path="/admin/pharmacy-requests" element={<ProtectedRoute><PharmacyRequestsPage /></ProtectedRoute>} />
+            <Route path="/demande-pharmacie" element={<ClientProtectedRoute><DemandePharmacieForm /></ClientProtectedRoute>} />
+            <Route path="/ma-demande-pharmacie" element={<ClientProtectedRoute><MaDemandePharmacie /></ClientProtectedRoute>} />
+            <Route path="/medicaments/:pharmacyId" element={<ClientProtectedRoute><Medicaments /></ClientProtectedRoute>} />
+            <Route path="/pharmacies/:pharmacyId/profil" element={<ClientProtectedRoute><PharmaciesProfile /></ClientProtectedRoute>} />
+            <Route path="/panier" element={<ClientProtectedRoute><Panier /></ClientProtectedRoute>} />
+            <Route path="/pharmacies" element={<ClientProtectedRoute><PharmaciesProches /></ClientProtectedRoute>} />
+            <Route path="/pharmacy-medicaments/:pharmacyId" element={<PharmacyMedicaments />} />
+            <Route path="/admin/medicaments/all" element={<AllMedicaments />} />
+            <Route path="/medicaments" element={<MedicamentsList />} />
+            <Route path="/admin/ManageMedicamentImages" element={<ProtectedRoute><ManageMedicamentImages /></ProtectedRoute>} />
+            <Route path="*"element={<div>404 - Page non trouvée</div>} />
+          </Route>
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 

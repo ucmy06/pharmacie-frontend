@@ -1,5 +1,3 @@
-// C:\reactjs node mongodb\pharmacie-frontend\src\pages\admin\ManageMedicamentImages.jsx
-
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../utils/axiosConfig';
@@ -21,12 +19,23 @@ export default function ManageMedicamentImages() {
       setLoading(true);
       try {
         const res = await axiosInstance.get('/api/medicaments/search');
-        // Extraire les noms uniques et leurs images
+        console.log('🔍 [fetchMedicaments] Réponse complète:', JSON.stringify(res.data, null, 2));
         const allMeds = res.data.data.pharmacies.flatMap(pharma => pharma.medicaments);
-        const uniqueDrugs = [...new Set(allMeds.map(med => med.nom))].map(nom => ({
-          nom,
-          images: allMeds.find(med => med.nom === nom).images || []
-        }));
+        console.log('🔍 [fetchMedicaments] allMeds:', allMeds.map(med => ({
+          nom: med.nom,
+          images: med.images || 'Aucune'
+        })));
+        const uniqueDrugs = [...new Set(allMeds.map(med => med.nom))].map(nom => {
+          const matchingMeds = allMeds.filter(med => med.nom === nom);
+          const images = matchingMeds.reduce((acc, med) => {
+            if (med.images && med.images.length > 0) {
+              return [...acc, ...med.images];
+            }
+            return acc;
+          }, []);
+          return { nom, images };
+        });
+        console.log('🔍 [fetchMedicaments] uniqueDrugs:', uniqueDrugs);
         setMedicaments(uniqueDrugs);
       } catch (err) {
         console.error('❌ Erreur chargement médicaments:', err);
@@ -68,7 +77,6 @@ export default function ManageMedicamentImages() {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setMessage(res.data.message || '✅ Images téléchargées avec succès');
-      // Mettre à jour les images localement
       setMedicaments(medicaments.map(med =>
         med.nom === selectedMedicament
           ? { ...med, images: res.data.data }
@@ -151,6 +159,7 @@ export default function ManageMedicamentImages() {
                       src={`http://localhost:3001${image.cheminFichier}`}
                       alt={`${med.nom} image ${index + 1}`}
                       className="w-16 h-16 object-cover"
+                      onError={(e) => console.error(`❌ [ManageMedicamentImages] Échec chargement image: http://localhost:3001${image.cheminFichier}`, e)}
                     />
                   ))}
                 </div>
