@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import path from 'path-browserify'; // Pour React
+
 
 const API_URL = 'http://localhost:3001';
 
@@ -238,12 +240,12 @@ export default function PharmaciesProches() {
           return (
             <div key={pharma._id} className="bg-white rounded-lg shadow-md p-4">
               <div className="flex items-center">
-                {pharma.pharmacieInfo.photoPharmacie?.nomFichier ? (
-                  <img
-                    src={`${API_URL}/api/images/pharmacies/${pharma.pharmacieInfo.photoPharmacie.nomFichier}`}
+                {pharma.pharmacieInfo.photoPharmacie?.cheminFichier ? (
+                <img
+                    src={`${API_URL}/api/images/pharmacies/${path.basename(pharma.pharmacieInfo.photoPharmacie.cheminFichier)}`}
                     alt={pharma.pharmacieInfo.nomPharmacie}
                     className="w-16 h-16 object-cover mr-4 rounded-lg"
-                    onError={(e) => console.error(`❌ [PharmaciesProches] Échec chargement image: ${API_URL}/api/images/pharmacies/${pharma.pharmacieInfo.photoPharmacie.nomFichier}`, e)}
+                    onError={(e) => console.error(`❌ Échec chargement image:`, e)}
                   />
                 ) : (
                   <div className="w-16 h-16 mr-4 flex items-center justify-center bg-gray-200 text-gray-600 rounded-lg">

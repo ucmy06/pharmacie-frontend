@@ -1,3 +1,5 @@
+// C:\reactjs node mongodb\pharmacie-frontend\src\utils\axiosConfig.js
+
 import axios from 'axios';
 
 const axiosInstance = axios.create({

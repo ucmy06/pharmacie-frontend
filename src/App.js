@@ -1,3 +1,4 @@
+// C:\reactjs node mongodb\pharmacie-frontend\src\App.js
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
@@ -32,7 +33,9 @@ import PharmaciesProches from './pages/PharmaciesProches';
 import PharmacyMedicaments from './pages/PharmacyMedicaments';
 import AllMedicaments from './pages/admin/AllMedicaments';
 import MedicamentsList from './pages/MedicamentsList';
-
+import CommandeDetails from './pages/dashboards/CommandeDetails';
+import CommandesClient from './pages/CommandesClient'; // Ajouter l'importation
+import CommandesPharmacie from './pages/CommandesPharmacie';
 
 import './App.css';
 
@@ -48,21 +51,17 @@ function App() {
     <AuthProvider>
       <Router>
         <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-          
-            <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
-            <Route path="/resend-verification" element={<ResendVerificationPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-            <Route element={<Layout />}>
-
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
+          <Route path="/resend-verification" element={<ResendVerificationPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+          <Route element={<Layout />}>
             <Route path="/dashboard" element={<ProtectedDashboard />} />
             <Route path="/admin-dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
             <Route path="/client-dashboard" element={<ClientProtectedRoute><ClientDashboard /></ClientProtectedRoute>} />
-            <Route path="/admin/modification-requests" element={<ProtectedRoute><AdminModificationRequests /></ProtectedRoute>} />
-            <Route path="/admin/pharmacies/database" element={<ProtectedRoute><AdminConnectDatabase /></ProtectedRoute>} />
             <Route path="/pharmacie/dashboard" element={<PharmacyProtectedRoute><PharmacieDashboard /></PharmacyProtectedRoute>} />
             <Route path="/pharmacie/profil" element={<PharmacyProtectedRoute><PharmacyProfile /></PharmacyProtectedRoute>} />
             <Route path="/pharmacie/connexion" element={<ClientProtectedRoute><ConnexionPharmacie /></ClientProtectedRoute>} />
@@ -78,8 +77,15 @@ function App() {
             <Route path="/pharmacy-medicaments/:pharmacyId" element={<PharmacyMedicaments />} />
             <Route path="/admin/medicaments/all" element={<AllMedicaments />} />
             <Route path="/medicaments" element={<MedicamentsList />} />
+            <Route path="/admin/pharmacies/database" element={<ProtectedRoute><AdminConnectDatabase /></ProtectedRoute>} />
+            <Route path="/admin/modification-requests" element={<ProtectedRoute><AdminModificationRequests /></ProtectedRoute>} />
+
             <Route path="/admin/ManageMedicamentImages" element={<ProtectedRoute><ManageMedicamentImages /></ProtectedRoute>} />
-            <Route path="*"element={<div>404 - Page non trouvée</div>} />
+            <Route path="/admin/commande/:id" element={<ProtectedRoute><CommandeDetails /></ProtectedRoute>} />
+            <Route path="/commandes" element={<ClientProtectedRoute><CommandesClient /></ClientProtectedRoute>} /> {/* Nouvelle route */}
+            <Route path="/pharmacie/commandes" element={<PharmacyProtectedRoute><CommandesPharmacie /></PharmacyProtectedRoute>} />
+
+            <Route path="*" element={<div>404 - Page non trouvée</div>} />
           </Route>
         </Routes>
       </Router>

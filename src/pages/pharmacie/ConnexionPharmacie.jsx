@@ -1,6 +1,4 @@
-
 // C:\reactjs node mongodb\pharmacie-frontend\src\pages\pharmacie\ConnexionPharmacie.jsx
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -17,18 +15,14 @@ export default function PharmacyLogin() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  
-
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    // 🔎 Vérification client connecté
     if (!token || !user) {
-      console.warn('Aucun client connecté. Redirection...');
-      setError('Vous devez être connecté en tant que client pour accéder à cette page');
+      setError('Vous devez être connecté en tant que client');
+      console.warn('⚠️ [PharmacyLogin] Aucun client connecté');
       navigate('/login');
       setLoading(false);
       return;
@@ -42,56 +36,31 @@ export default function PharmacyLogin() {
         nom: user.nom,
         prenom: user.prenom,
         email: user.email,
-        telephone: user.telephone
-      }
+        telephone: user.telephone,
+      },
     };
 
-    console.log('📤 Données envoyées au backend :', payload);
-    console.log('📦 Token client envoyé :', token);
+    console.log('📤 [PharmacyLogin] Payload:', payload);
 
     try {
-      const res = await axios.post(
-        'http://localhost:3001/api/pharmacies/login',
-        payload,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      const res = await axios.post('http://localhost:3001/api/pharmacies/login', payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-      console.log('✅ Connexion pharmacie réussie :', res.data);
+      console.log('✅ [PharmacyLogin] Réponse:', res.data);
+      const { token: pharmacyToken, pharmacie } = res.data;
 
-      const tokenPharmacie = res.data.token;
-      const pharmacieData = res.data.pharmacie;
+      // Log détaillé du token décodé
+      const decodedToken = JSON.parse(atob(pharmacyToken.split('.')[1]));
+      console.log('🔑 [PharmacyLogin] Decoded pharmacyToken:', JSON.stringify(decodedToken, null, 2));
 
-      // 🔐 Stockage des infos
-      localStorage.setItem('pharmacyToken', tokenPharmacie);
-      localStorage.setItem('pharmacyInfo', JSON.stringify(pharmacieData));
-      localStorage.setItem('clientInfo', JSON.stringify(user));
+      localStorage.setItem('pharmacyToken', pharmacyToken);
+      localStorage.setItem('pharmacyInfo', JSON.stringify(pharmacie));
 
-      if (res.data.doitChangerMotDePasse) {
-        console.log('🔐 Redirection vers changement de mot de passe');
-        navigate('/pharmacie/change-password');
-      } else {
-        console.log('🚀 Redirection vers dashboard pharmacie');
-        navigate('/pharmacie/dashboard');
-      }
-
+      navigate(res.data.doitChangerMotDePasse ? '/pharmacie/change-password' : '/pharmacie/dashboard');
     } catch (err) {
-      console.error('❌ Erreur de connexion pharmacie :', err);
-
-      if (err.response) {
-        console.warn('🛑 Erreur backend :', err.response.data);
-        setError(err.response.data?.message || 'Erreur de connexion à la pharmacie');
-      } else if (err.request) {
-        console.warn('📡 Aucune réponse serveur');
-        setError('Impossible de contacter le serveur');
-      } else {
-        console.warn('⚠️ Erreur inconnue');
-        setError('Erreur lors de la connexion');
-      }
+      console.error('❌ [PharmacyLogin] Erreur:', err.response?.data || err.message);
+      setError(err.response?.data?.message || 'Erreur de connexion');
     } finally {
       setLoading(false);
     }
@@ -100,21 +69,7 @@ export default function PharmacyLogin() {
   return (
     <div className="max-w-md mx-auto p-6 bg-white shadow-lg rounded">
       <h2 className="text-2xl font-bold mb-4">Connexion Pharmacie</h2>
-
-      {user && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
-          <p className="text-sm text-blue-700">
-            Connecté en tant que : {user.prenom} {user.nom}
-          </p>
-        </div>
-      )}
-
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">
-          <p className="text-red-700">{error}</p>
-        </div>
-      )}
-
+      {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
       <form onSubmit={handleSubmit}>
         <input
           type="email"

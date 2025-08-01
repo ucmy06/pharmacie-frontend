@@ -1,12 +1,23 @@
+// C:\reactjs node mongodb\pharmacie-frontend\src\pages\PharmacieDashboard.jsx
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import io from 'socket.io-client';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const API_URL = 'http://localhost:3001';
+const socket = io(API_URL, {
+  withCredentials: true,
+  extraHeaders: {
+    Authorization: `Bearer ${localStorage.getItem('pharmacyToken')}`,
+  },
+});
 
 export default function PharmacieDashboard() {
   const navigate = useNavigate();
   const [pharmacie, setPharmacie] = useState(null);
+  const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
 
@@ -18,6 +29,7 @@ export default function PharmacieDashboard() {
       return;
     }
 
+    // Récupérer le profil
     axios
       .get(`${API_URL}/api/pharmacies/mon-profil`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -26,6 +38,8 @@ export default function PharmacieDashboard() {
         console.log('🔍 Réponse API complète:', res.data);
         if (res.data.success && res.data.pharmacie) {
           setPharmacie(res.data.pharmacie);
+          // Rejoindre la salle WebSocket pour la pharmacie
+          socket.emit('joinPharmacie', res.data.pharmacie._id);
         } else {
           console.error('Structure de réponse inattendue:', res.data);
           navigate('/pharmacie/connexion');
@@ -38,6 +52,32 @@ export default function PharmacieDashboard() {
         localStorage.removeItem('pharmacyInfo');
         navigate('/pharmacie/connexion');
       });
+
+    // Récupérer les notifications non lues
+    axios
+      .get(`${API_URL}/api/client/notifications`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => {
+        if (res.data.success) {
+          setNotifications(res.data.data.notifications);
+        }
+      })
+      .catch((err) => {
+        console.error('❌ Erreur chargement notifications:', err);
+      });
+
+    // Écouter les nouvelles commandes via WebSocket
+    socket.on('nouvelleCommande', (data) => {
+      console.log('🔔 Nouvelle commande reçue via WebSocket:', data);
+      setNotifications((prev) => [...prev, data.notification]);
+      toast.info(`Nouvelle commande: ${data.notification.message}`);
+    });
+
+    // Nettoyer la connexion WebSocket
+    return () => {
+      socket.off('nouvelleCommande');
+    };
   }, [navigate]);
 
   const handleLogout = () => {
@@ -45,10 +85,10 @@ export default function PharmacieDashboard() {
     localStorage.removeItem('pharmacyInfo');
     localStorage.removeItem('userToken');
     localStorage.removeItem('userInfo');
+    socket.disconnect();
     navigate('/pharmacie/connexion');
   };
 
-  // Fonction pour construire l'URL de l'image
   const getImageUrl = (cheminFichier) => {
     if (!cheminFichier) {
       console.log('📷 Aucun chemin d\'image fourni, utilisation de l\'image par défaut');
@@ -73,6 +113,7 @@ export default function PharmacieDashboard() {
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
+      <ToastContainer />
       <h1 className="text-2xl font-semibold mb-6 text-gray-800">Tableau de bord de la Pharmacie</h1>
       <div className="bg-white rounded-lg shadow-lg p-6 max-w-2xl mx-auto">
         <div className="flex flex-col items-center mb-6">
@@ -122,6 +163,17 @@ export default function PharmacieDashboard() {
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
           >
             Modifier le profil
+          </button>
+          <button
+            onClick={() => navigate('/pharmacie/commandes')}
+            className="relative bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            Gérer les commandes
+            {notifications.length > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-2 py-1">
+                {notifications.length}
+              </span>
+            )}
           </button>
           <button
             onClick={handleLogout}
