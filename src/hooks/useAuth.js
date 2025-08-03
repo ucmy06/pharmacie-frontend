@@ -5,7 +5,7 @@ const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token')); // Changé de 'userToken' à 'token'
+  const [token, setToken] = useState(localStorage.getItem('token'));
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -16,8 +16,13 @@ export function AuthProvider({ children }) {
         console.log('🔐 [useAuth] userInfo brut:', storedUser);
         if (storedUser) {
           const parsedUser = JSON.parse(storedUser);
-          setUser(parsedUser);
-          console.log('✅ [useAuth] Utilisateur chargé:', parsedUser);
+          // Normaliser user.id à partir de _id
+          const normalizedUser = {
+            ...parsedUser,
+            id: parsedUser._id,
+          };
+          setUser(normalizedUser);
+          console.log('✅ [useAuth] Utilisateur chargé:', normalizedUser);
         } else {
           console.warn('⚠️ [useAuth] userInfo absent');
           setUser(null);
@@ -25,7 +30,9 @@ export function AuthProvider({ children }) {
       } catch (error) {
         console.error('❌ [useAuth] Erreur parsing userInfo:', error);
         localStorage.removeItem('userInfo');
+        localStorage.removeItem('token');
         setUser(null);
+        setToken(null);
       }
     } else {
       console.warn('⚠️ [useAuth] Token absent');
@@ -34,12 +41,17 @@ export function AuthProvider({ children }) {
     setIsLoading(false);
   }, [token]);
 
-  const login = (authToken, userData) => { // Inversé l'ordre pour correspondre à Login.js
+  const login = (authToken, userData) => {
     console.log('🔐 [useAuth] Connexion:', { userData, token: authToken.slice(0, 10) + '...' });
+    // Normaliser userData pour inclure id
+    const normalizedUserData = {
+      ...userData,
+      id: userData._id,
+    };
     setToken(authToken);
-    setUser(userData);
-    localStorage.setItem('token', authToken); // Changé de 'userToken' à 'token'
-    localStorage.setItem('userInfo', JSON.stringify(userData));
+    setUser(normalizedUserData);
+    localStorage.setItem('token', authToken);
+    localStorage.setItem('userInfo', JSON.stringify(normalizedUserData));
   };
 
   const logout = () => {
@@ -48,7 +60,7 @@ export function AuthProvider({ children }) {
     setToken(null);
     localStorage.removeItem('token');
     localStorage.removeItem('userInfo');
-    localStorage.removeItem('pharmacyToken'); // Nettoyage
+    localStorage.removeItem('pharmacyToken');
   };
 
   return (

@@ -1,11 +1,11 @@
 // C:\reactjs node mongodb\pharmacie-frontend\src\pages\dashboards\CommandeDetails.jsx
 
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
 import axios from 'axios';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useAuth } from '../../hooks/useAuth';
 
 const API_URL = 'http://localhost:3001';
 
@@ -69,7 +69,7 @@ export default function CommandeDetails() {
             <p><strong>Client :</strong> {commande.clientId.nom} {commande.clientId.prenom} ({commande.clientId.email})</p>
             <p><strong>Pharmacie :</strong> {commande.pharmacyId.pharmacieInfo.nomPharmacie}</p>
             <p><strong>Statut :</strong> {commande.statut}</p>
-            <p><strong>Total :</strong> {commande.total} €</p>
+            <p><strong>Total :</strong> {commande.total} Francs</p>
             <p><strong>Livraison :</strong> {commande.livraison ? 'Oui' : 'Non'}</p>
             {commande.livraison && (
               <p><strong>Adresse de livraison :</strong> {commande.adresseLivraison}</p>
@@ -86,7 +86,7 @@ export default function CommandeDetails() {
                   <li key={index} className="text-gray-800">
                     <p><strong>{item.nom}</strong></p>
                     <p>Quantité : {item.quantite}</p>
-                    <p>Prix unitaire : {item.prixUnitaire} €</p>
+                    <p>Prix unitaire : {item.prixUnitaire} Francs</p>
                     {item.image && (
                       <img
                         src={`${API_URL}/Uploads/medicaments/${item.image}`}

@@ -1,5 +1,4 @@
 // C:\reactjs node mongodb\pharmacie-frontend\src\pages\dashboards\AdminDashboard.jsx
-
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -46,6 +45,66 @@ export default function AdminDashboard() {
       return;
     }
 
+    // Demander la permission pour les notifications push
+    const setupPushNotifications = async () => {
+      if ('Notification' in window && 'serviceWorker' in navigator) {
+        try {
+          const permission = await Notification.requestPermission();
+          if (permission === 'granted') {
+            console.log('✅ Permission de notification accordée');
+            const registration = await navigator.serviceWorker.register('/service-worker.js');
+            console.log('✅ Service Worker enregistré:', registration);
+
+            const vapidResponse = await axios.get(`${API_URL}/api/client/vapid-public-key`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            const vapidPublicKey = vapidResponse.data.publicKey;
+
+            const subscription = await registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+            });
+            console.log('✅ Abonnement push créé:', subscription);
+
+            await axios.post(
+              `${API_URL}/api/client/subscribe`,
+              subscription,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            console.log('✅ Abonnement push envoyé au backend');
+          } else {
+            console.warn('⚠️ Permission de notification refusée');
+          }
+        } catch (error) {
+          console.error('❌ Erreur configuration notifications push:', error);
+          toast.error('Erreur lors de la configuration des notifications push');
+        }
+      } else {
+        console.warn('⚠️ Notifications push non supportées par le navigateur');
+      }
+    };
+
+    const urlBase64ToUint8Array = (base64String) => {
+      const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const rawData = window.atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
+      for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+      return outputArray;
+    };
+
+    setupPushNotifications();
+
+    // Écouter les messages du service worker pour jouer le son
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data && event.data.action === 'playNotificationSound') {
+        const audio = new Audio('/notification.mp3');
+        audio.play().catch((err) => console.error('❌ Erreur lecture son:', err));
+      }
+    });
+
     // Fetch dashboard stats
     const fetchDashboardStats = async () => {
       try {
@@ -68,7 +127,7 @@ export default function AdminDashboard() {
     // Fetch notifications
     const fetchNotifications = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/client/notifications`, {
+        const response = await axios.get(`${API_URL}/api/admin/notifications`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.data.success) {
@@ -88,12 +147,15 @@ export default function AdminDashboard() {
       console.log('🔔 Nouvelle commande reçue:', data);
       setNotifications((prev) => [...prev, data.notification]);
       toast.info(`Nouvelle commande: ${data.notification.message}`);
+      const audio = new Audio('/notification.mp3');
+      audio.play().catch((err) => console.error('❌ Erreur lecture son:', err));
     });
 
     socket.emit('joinPharmacie', user._id);
 
     return () => {
       socket.off('nouvelleCommande');
+      navigator.serviceWorker.removeEventListener('message', () => {});
     };
   }, [user, token, navigate, isLoading]);
 
@@ -105,7 +167,7 @@ export default function AdminDashboard() {
   const handleMarquerLu = async (notificationId) => {
     try {
       const response = await axios.put(
-        `${API_URL}/api/client/notifications/${notificationId}/lu`,
+        `${API_URL}/api/admin/notifications/${notificationId}/lu`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -133,19 +195,12 @@ export default function AdminDashboard() {
 
   const { resume, pharmaciesParStatut, activiteRecente, alertes, evolutionInscriptions, evolutionCommandes, commandesParPharmacie } = dashboardStats;
 
-  // Chart: Évolution des inscriptions
   const inscriptionLabels = evolutionInscriptions?.map((item) => `${item._id.month}/${item._id.year}`) || [];
   const inscriptionData = evolutionInscriptions?.map((item) => item.count) || [];
-
-  // Chart: Répartition des pharmacies par statut
   const pharmacieStatutLabels = pharmaciesParStatut?.map((item) => item._id || 'Inconnu') || [];
   const pharmacieStatutData = pharmaciesParStatut?.map((item) => item.count) || [];
-
-  // Chart: Évolution des commandes
   const commandeLabels = evolutionCommandes?.map((item) => `${item._id.month}/${item._id.year}`) || [];
   const commandeData = evolutionCommandes?.map((item) => item.count) || [];
-
-  // Chart: Commandes par pharmacie
   const commandesParPharmacieLabels = commandesParPharmacie?.map((item) => item.pharmacieNom || 'Inconnu') || [];
   const commandesParPharmacieData = commandesParPharmacie?.map((item) => item.count) || [];
 
@@ -167,7 +222,6 @@ export default function AdminDashboard() {
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Résumé */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-lg font-bold text-gray-800 mb-4">📊 Résumé</h2>
             <p><strong>Total utilisateurs :</strong> {resume.totalUsers || 0}</p>
@@ -182,7 +236,6 @@ export default function AdminDashboard() {
             <p><strong>Commandes livrées :</strong> {resume.commandesLivrees || 0}</p>
           </div>
 
-          {/* Notifications */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-lg font-bold text-gray-800 mb-4">🔔 Notifications ({notifications.length})</h2>
             {notifications.length === 0 ? (
@@ -217,7 +270,6 @@ export default function AdminDashboard() {
             )}
           </div>
 
-          {/* Alertes */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-lg font-bold text-gray-800 mb-4">🚨 Alertes</h2>
             {alertes.length === 0 ? (
@@ -241,7 +293,6 @@ export default function AdminDashboard() {
             )}
           </div>
 
-          {/* Graphique : Évolution des inscriptions */}
           {inscriptionLabels.length > 0 && (
             <div className="bg-white rounded-lg shadow-md p-6">
               <Line
@@ -270,7 +321,6 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Graphique : Répartition des pharmacies par statut */}
           {pharmacieStatutLabels.length > 0 && (
             <div className="bg-white rounded-lg shadow-md p-6">
               <Bar
@@ -298,7 +348,6 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Graphique : Évolution des commandes */}
           {commandeLabels.length > 0 && (
             <div className="bg-white rounded-lg shadow-md p-6">
               <Line
@@ -327,7 +376,6 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Graphique : Commandes par pharmacie */}
           {commandesParPharmacieLabels.length > 0 && (
             <div className="bg-white rounded-lg shadow-md p-6">
               <Bar
@@ -355,7 +403,6 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Activités récentes */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-lg font-bold text-gray-800 mb-4">📅 Activités récentes</h2>
             {activiteRecente.length === 0 ? (

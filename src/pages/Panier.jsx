@@ -1,9 +1,10 @@
+// C:\reactjs node mongodb\pharmacie-frontend\src\pages\Panier.jsx
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-import axios from '../utils/axiosConfig';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useAuth } from '../hooks/useAuth';
+import axios from '../utils/axiosConfig';
 
 const API_URL = 'http://localhost:3001';
 
@@ -83,11 +84,11 @@ export default function Panier() {
     }
 
     const commandeData = {
-      pharmacyId: cart.pharmacyId, // Changé de pharmacieId à pharmacyId
+      pharmacyId: cart.pharmacyId,
       medicaments: cart.medicaments.map((item) => ({
         medicamentId: item.medicamentId,
         quantite: item.quantite,
-        prix: item.prixUnitaire, // Changé de prixUnitaire à prix
+        prix: item.prixUnitaire,
       })),
       livraison,
       adresseLivraison: livraison && position ? { ...position, adresseTexte: 'Position actuelle' } : undefined,
@@ -102,7 +103,7 @@ export default function Panier() {
       if (response.data.success) {
         toast.success('Commande passée avec succès !');
         setCarts((prevCarts) => prevCarts.filter((c) => c._id !== cart._id));
-        navigate('/commandes');
+        // Pas de redirection automatique ici
       } else {
         toast.error(response.data.message || 'Erreur lors de la commande');
       }
@@ -195,6 +196,12 @@ export default function Panier() {
         <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-6">
           <h1 className="text-2xl font-bold text-blue-700 mb-6">🛒 Panier</h1>
           <p className="text-gray-600">Votre panier est vide.</p>
+          <button
+            onClick={() => navigate('/commandes')}
+            className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+          >
+            Voir mes commandes
+          </button>
         </div>
       </div>
     );
@@ -204,7 +211,15 @@ export default function Panier() {
     <div className="min-h-screen bg-gray-100 p-6">
       <ToastContainer />
       <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-6">
-        <h1 className="text-2xl font-bold text-blue-700 mb-6">🛒 Paniers</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-blue-700">🛒 Paniers</h1>
+          <button
+            onClick={() => navigate('/commandes')}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+          >
+            Voir mes commandes
+          </button>
+        </div>
         {carts.map((cart, cartIndex) => (
           <div key={cart.pharmacyId} className="mb-8">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">
@@ -239,7 +254,7 @@ export default function Panier() {
                           <div>
                             <p className="font-bold">{item.nom}</p>
                             <p>Quantité : {item.quantite}</p>
-                            <p>Prix : {(item.prixUnitaire * item.quantite).toFixed(2)} €</p>
+                            <p>Prix : {(item.prixUnitaire * item.quantite).toFixed(2)} Francs</p>
                             <button
                               onClick={() => handleRemoveItem(cart._id, item.medicamentId)}
                               className="mt-2 bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
@@ -256,7 +271,7 @@ export default function Panier() {
                   ))}
                 </ul>
                 <div className="mt-6">
-                  <p className="text-lg font-bold">Total : {cart.total ? cart.total.toFixed(2) : '0.00'} €</p>
+                  <p className="text-lg font-bold">Total : {cart.total ? cart.total.toFixed(2) : '0.00'} Francs</p>
                   <div className="mt-4 flex gap-4">
                     <button
                       onClick={() => handlePasserCommande(cart, false)}
