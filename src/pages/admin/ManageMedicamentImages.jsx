@@ -25,16 +25,23 @@ export default function ManageMedicamentImages() {
           nom: med.nom,
           images: med.images || 'Aucune'
         })));
-        const uniqueDrugs = [...new Set(allMeds.map(med => med.nom))].map(nom => {
-          const matchingMeds = allMeds.filter(med => med.nom === nom);
-          const images = matchingMeds.reduce((acc, med) => {
-            if (med.images && med.images.length > 0) {
-              return [...acc, ...med.images];
-            }
-            return acc;
-          }, []);
-          return { nom, images };
-        });
+          const uniqueDrugs = [...new Set(allMeds.map(med => med.nom))].map(nom => {
+            const matchingMeds = allMeds.filter(med => med.nom === nom);
+            const images = matchingMeds.reduce((acc, med) => {
+              if (med.images && med.images.length > 0) {
+                return [...acc, ...med.images];
+              }
+              return acc;
+            }, []);
+
+            // Supprimer les doublons d'images en se basant sur cheminFichier
+            const uniqueImages = Array.from(
+              new Map(images.map(img => [img.cheminFichier, img])).values()
+            );
+
+            return { nom, images: uniqueImages };
+          });
+
         console.log('🔍 [fetchMedicaments] uniqueDrugs:', uniqueDrugs);
         setMedicaments(uniqueDrugs);
       } catch (err) {

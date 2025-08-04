@@ -1,3 +1,5 @@
+// C:\reactjs node mongodb\pharmacie-frontend\src\pages\PharmaciesProches.jsx
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
