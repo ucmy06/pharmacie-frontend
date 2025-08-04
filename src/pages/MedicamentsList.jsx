@@ -230,7 +230,7 @@ export default function MedicamentsList() {
 
   const goToPharmacy = (medicament) => {
     console.log('🏪 [goToPharmacy] Navigation vers pharmacie:', medicament.pharmacyId);
-    navigate(`/client/pharmacie/${medicament.pharmacyId}`, { 
+    navigate(`/pharmacies/${medicament.pharmacyId}/profil`, { 
       state: { 
         pharmacyName: medicament.pharmacieInfo?.nomPharmacie || 'Pharmacie'
       } 
