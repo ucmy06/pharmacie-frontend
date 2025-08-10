@@ -1,3 +1,4 @@
+// C:\reactjs node mongodb\pharmacie-frontend\src\pages\PharmaciesProfile.jsx
 import axios from 'axios';
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -6,6 +7,8 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-defaulticon-compatibility';
 import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const API_URL = 'http://localhost:3001';
 
@@ -132,13 +135,15 @@ async function getCoordinates(url) {
 export default function PharmacyProfile() {
   const { pharmacyId } = useParams();
   const navigate = useNavigate();
-  const { token, isLoading } = useAuth();
+  const { token, isLoading, user } = useAuth();
   const [pharmacy, setPharmacy] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [coords, setCoords] = useState(null);
   const [loadingCoords, setLoadingCoords] = useState(false);
   const [mapKey, setMapKey] = useState(0);
+  const [message, setMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (isLoading || !token) {
@@ -158,7 +163,6 @@ export default function PharmacyProfile() {
           console.log('✅ Données de la pharmacie récupérées:', response.data.pharmacie);
           setPharmacy(response.data.pharmacie);
           
-          // Extraire les coordonnées de l'adresse Google Maps
           const info = response.data.pharmacie.pharmacieInfo || {};
           if (info.adresseGoogleMaps) {
             setLoadingCoords(true);
@@ -189,6 +193,35 @@ export default function PharmacyProfile() {
     fetchPharmacy();
   }, [pharmacyId, token, isLoading]);
 
+  const handleDemandeIntegration = async () => {
+    if (!user || !token) {
+      toast.error('Vous devez être connecté pour soumettre une demande');
+      navigate('/login');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const response = await axios.post(
+        `${API_URL}/api/pharmacies/demande-integration`,
+        { pharmacyId, message },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.success) {
+        toast.success('Demande d\'intégration envoyée avec succès');
+        setMessage('');
+      } else {
+        toast.error(response.data.message || 'Erreur lors de l\'envoi de la demande');
+      }
+    } catch (err) {
+      console.error('❌ Erreur envoi demande intégration:', err);
+      toast.error(err.response?.data?.message || 'Erreur serveur');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (loading) return <div className="p-6 text-lg text-gray-800">Chargement...</div>;
   if (error) return <p className="p-6 text-red-600">{error}</p>;
   if (!pharmacy) return <p className="p-6 text-gray-600">Pharmacie non trouvée.</p>;
@@ -197,6 +230,7 @@ export default function PharmacyProfile() {
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
+      <ToastContainer />
       <h1 className="text-2xl font-semibold mb-6 text-gray-800">
         {info.nomPharmacie || 'Pharmacie'}
       </h1>
@@ -264,11 +298,30 @@ export default function PharmacyProfile() {
           </div>
         )}
 
+        {/* 📝 Demande d'intégration */}
+        <div className="mt-6">
+          <h2 className="text-lg font-bold text-gray-800 mb-3">Demander à rejoindre la pharmacie</h2>
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Message optionnel pour accompagner votre demande"
+            className="w-full p-2 border rounded mb-2"
+            rows={4}
+            disabled={submitting}
+          />
+          <button
+            onClick={handleDemandeIntegration}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 disabled:opacity-50"
+            disabled={submitting}
+          >
+            {submitting ? 'Envoi en cours...' : 'Envoyer la demande d\'intégration'}
+          </button>
+        </div>
+
         {/* 🗺️ Carte */}
         <div className="mt-6">
           <h2 className="text-lg font-bold text-gray-800 mb-2">Localisation sur la carte</h2>
           
-          {/* Affichage des informations de debug */}
           <div className="mb-4 p-3 bg-gray-50 rounded-lg text-sm">
             <p><strong>URL Google Maps :</strong> {info.adresseGoogleMaps || 'Non définie'}</p>
             <p><strong>Coordonnées extraites :</strong> {coords ? `${coords.latitude}, ${coords.longitude}` : 'Aucune'}</p>

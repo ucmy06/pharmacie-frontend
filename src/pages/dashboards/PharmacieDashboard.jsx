@@ -1,5 +1,5 @@
-// C:\reactjs node mongodb\pharmacie-frontend\src\pages\PharmacieDashboard.jsx
-import { useEffect, useState } from 'react';
+// src/components/PharmacieDashboard.jsx
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import io from 'socket.io-client';
@@ -8,10 +8,8 @@ import 'react-toastify/dist/ReactToastify.css';
 
 const API_URL = 'http://localhost:3001';
 const socket = io(API_URL, {
+  autoConnect: false, // Attendre la connexion explicite
   withCredentials: true,
-  extraHeaders: {
-    Authorization: `Bearer ${localStorage.getItem('pharmacyToken')}`,
-  },
 });
 
 export default function PharmacieDashboard() {
@@ -20,34 +18,55 @@ export default function PharmacieDashboard() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
+  const [isCreatedBy, setIsCreatedBy] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('pharmacyToken');
+    const pharmacyToken = localStorage.getItem('pharmacyToken');
+    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
 
-    if (!token) {
+    if (!pharmacyToken) {
+      console.error('❌ Aucun pharmacyToken trouvé');
+      toast.error('Vous devez vous connecter à la pharmacie');
       navigate('/pharmacie/connexion');
       return;
     }
 
+    if (!userInfo._id) {
+      console.error('❌ userInfo._id non défini');
+      toast.error('Informations utilisateur manquantes');
+      navigate('/login');
+      return;
+    }
+
+    // Configurer Socket.io avec pharmacyToken
+    socket.auth = { token: pharmacyToken };
+    socket.connect();
+
     // Récupérer le profil
     axios
       .get(`${API_URL}/api/pharmacies/mon-profil`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${pharmacyToken}` },
       })
       .then((res) => {
-        console.log('🔍 Réponse API complète:', res.data);
+        console.log('🔍 Réponse API /mon-profil:', JSON.stringify(res.data, null, 2));
         if (res.data.success && res.data.pharmacie) {
           setPharmacie(res.data.pharmacie);
-          // Rejoindre la salle WebSocket pour la pharmacie
+          const isCreatedBy = res.data.pharmacie.pharmacieInfo.createdBy?.toString() === userInfo._id?.toString();
+          console.log('🔍 pharmacieInfo.createdBy:', res.data.pharmacie.pharmacieInfo.createdBy);
+          console.log('🔍 userInfo._id:', userInfo._id);
+          console.log('🔍 isCreatedBy:', isCreatedBy);
+          setIsCreatedBy(isCreatedBy);
           socket.emit('joinPharmacie', res.data.pharmacie._id);
         } else {
-          console.error('Structure de réponse inattendue:', res.data);
+          console.error('❌ Structure de réponse inattendue:', res.data);
+          toast.error('Erreur lors du chargement du profil');
           navigate('/pharmacie/connexion');
         }
         setLoading(false);
       })
       .catch((err) => {
-        console.error('❌ Erreur chargement profil pharmacie:', err);
+        console.error('❌ Erreur chargement profil pharmacie:', err.response?.data || err.message);
+        toast.error(err.response?.data?.message || 'Erreur lors du chargement du profil');
         localStorage.removeItem('pharmacyToken');
         localStorage.removeItem('pharmacyInfo');
         navigate('/pharmacie/connexion');
@@ -55,37 +74,48 @@ export default function PharmacieDashboard() {
 
     // Récupérer les notifications non lues
     axios
-      .get(`${API_URL}/api/client/notifications`, {
-        headers: { Authorization: `Bearer ${token}` },
+      .get(`${API_URL}/api/pharmacies/notifications`, {
+        headers: { Authorization: `Bearer ${pharmacyToken}` },
       })
       .then((res) => {
         if (res.data.success) {
+          console.log('🔔 Notifications reçues:', res.data.data.notifications);
           setNotifications(res.data.data.notifications);
         }
       })
       .catch((err) => {
-        console.error('❌ Erreur chargement notifications:', err);
+        console.error('❌ Erreur chargement notifications:', err.response?.data || err.message);
+        toast.warn('Impossible de charger les notifications');
       });
 
-    // Écouter les nouvelles commandes via WebSocket
+    // Écouter les événements WebSocket
+    socket.on('connect', () => console.log('✅ Connecté au socket'));
+    socket.on('connect_error', (err) => console.error('❌ Erreur de connexion socket:', err.message));
     socket.on('nouvelleCommande', (data) => {
       console.log('🔔 Nouvelle commande reçue via WebSocket:', data);
       setNotifications((prev) => [...prev, data.notification]);
       toast.info(`Nouvelle commande: ${data.notification.message}`);
     });
+    socket.on('demandeIntegration', (data) => {
+      console.log('📬 Nouvelle demande d\'intégration:', data);
+      setNotifications((prev) => [...prev, { message: `Nouvelle demande d'intégration de ${data.clientNom}` }]);
+      toast.info(`Nouvelle demande d'intégration de ${data.clientNom}`);
+    });
 
-    // Nettoyer la connexion WebSocket
     return () => {
+      socket.off('connect');
+      socket.off('connect_error');
       socket.off('nouvelleCommande');
+      socket.off('demandeIntegration');
+      socket.disconnect();
     };
   }, [navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem('pharmacyToken');
     localStorage.removeItem('pharmacyInfo');
-    localStorage.removeItem('userToken');
-    localStorage.removeItem('userInfo');
     socket.disconnect();
+    toast.success('Déconnexion réussie');
     navigate('/pharmacie/connexion');
   };
 
@@ -94,15 +124,14 @@ export default function PharmacieDashboard() {
       console.log('📷 Aucun chemin d\'image fourni, utilisation de l\'image par défaut');
       return '/default-pharmacy-image.jpg';
     }
-    const cleanPath = cheminFichier.startsWith('Uploads/') ? cheminFichier.replace('Uploads/', '') : cheminFichier;
-    const [type, filename] = cleanPath.split('/');
-    const url = `${API_URL}/api/images/${type}/${filename}`;
+    const cleanPath = cheminFichier.replace(/\\/g, '/').replace(/^Uploads\//, '');
+    const url = `${API_URL}/Uploads/${cleanPath}`;
     console.log('📷 URL de l\'image générée:', url);
     return url;
   };
 
   if (loading) {
-    return <div className="p-6 text-white">Chargement...</div>;
+    return <div className="p-6 text-gray-600">Chargement...</div>;
   }
 
   if (!pharmacie || !pharmacie.pharmacieInfo) {
@@ -114,7 +143,9 @@ export default function PharmacieDashboard() {
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
       <ToastContainer />
-      <h1 className="text-2xl font-semibold mb-6 text-gray-800">Tableau de bord de la Pharmacie</h1>
+      <h1 className="text-2xl font-semibold mb-6 text-gray-800">
+        Tableau de bord de la Pharmacie
+      </h1>
       <div className="bg-white rounded-lg shadow-lg p-6 max-w-2xl mx-auto">
         <div className="flex flex-col items-center mb-6">
           <div className="relative w-32 h-32 mb-4">
@@ -157,7 +188,7 @@ export default function PharmacieDashboard() {
             {pharmacieInfo.estDeGarde ? 'En garde' : 'Hors garde'}
           </p>
         </div>
-        <div className="mt-6 flex gap-4 justify-center">
+        <div className="mt-6 flex gap-4 justify-center flex-wrap">
           <button
             onClick={() => navigate('/pharmacie/profil')}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
@@ -175,6 +206,14 @@ export default function PharmacieDashboard() {
               </span>
             )}
           </button>
+          {isCreatedBy && (
+            <button
+              onClick={() => navigate('/pharmacie/demandes-integration')}
+              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              Gérer les demandes d'intégration
+            </button>
+          )}
           <button
             onClick={handleLogout}
             className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors"

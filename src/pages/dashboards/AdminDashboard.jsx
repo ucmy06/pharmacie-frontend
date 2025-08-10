@@ -50,9 +50,9 @@ export default function AdminDashboard() {
         try {
           const permission = await Notification.requestPermission();
           if (permission === 'granted') {
-            console.log('✅ Permission de notification accordée');
+            console.log(' Permission de notification accordée');
             const registration = await navigator.serviceWorker.register('/service-worker.js');
-            console.log('✅ Service Worker enregistré:', registration);
+            console.log(' Service Worker enregistré:', registration);
 
             const vapidResponse = await axios.get(`${API_URL}/api/client/vapid-public-key`, {
               headers: { Authorization: `Bearer ${token}` },
@@ -71,7 +71,7 @@ export default function AdminDashboard() {
             );
           }
         } catch (error) {
-          console.error('❌ Erreur configuration notifications push:', error);
+          console.error(' Erreur configuration notifications push:', error);
           toast.error('Erreur lors de la configuration des notifications push');
         }
       }
@@ -93,7 +93,7 @@ export default function AdminDashboard() {
     navigator.serviceWorker.addEventListener('message', (event) => {
       if (event.data && event.data.action === 'playNotificationSound') {
         const audio = new Audio('/notification.mp3');
-        audio.play().catch((err) => console.error('❌ Erreur lecture son:', err));
+        audio.play().catch((err) => console.error(' Erreur lecture son:', err));
       }
     });
 
@@ -110,7 +110,7 @@ export default function AdminDashboard() {
           toast.error(response.data.message || 'Erreur lors du chargement des statistiques');
         }
       } catch (err) {
-        console.error('❌ Erreur chargement statistiques:', err);
+        console.error(' Erreur chargement statistiques:', err);
         setError('Erreur serveur: ' + (err.response?.data?.message || err.message));
         toast.error('Erreur serveur: ' + (err.response?.data?.message || err.message));
       }
@@ -125,7 +125,7 @@ export default function AdminDashboard() {
           setNotifications(response.data.data.notifications || []);
         }
       } catch (err) {
-        console.error('❌ Erreur chargement notifications:', err);
+        console.error(' Erreur chargement notifications:', err);
         toast.error('Erreur lors du chargement des notifications');
       }
     };
@@ -135,11 +135,11 @@ export default function AdminDashboard() {
     });
 
     socket.on('nouvelleCommande', (data) => {
-      console.log('🔔 Nouvelle commande reçue:', data);
+      console.log(' Nouvelle commande reçue:', data);
       setNotifications((prev) => [...prev, data.notification]);
       toast.info(`Nouvelle commande: ${data.notification.message}`);
       const audio = new Audio('/notification.mp3');
-      audio.play().catch((err) => console.error('❌ Erreur lecture son:', err));
+      audio.play().catch((err) => console.error(' Erreur lecture son:', err));
     });
 
     socket.emit('joinPharmacie', user._id);
@@ -162,7 +162,7 @@ export default function AdminDashboard() {
         toast.success('Notification marquée comme lue');
       }
     } catch (err) {
-      console.error('❌ Erreur marquage notification:', err);
+      console.error(' Erreur marquage notification:', err);
       toast.error('Erreur lors du marquage de la notification');
     }
   };
@@ -187,7 +187,7 @@ export default function AdminDashboard() {
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-red-50 to-pink-100">
         <div className="bg-white p-8 rounded-xl shadow-lg border border-red-200">
           <div className="text-red-600 text-center">
-            <div className="text-4xl mb-4">⚠️</div>
+            <div className="text-4xl mb-4"></div>
             <h2 className="text-xl font-semibold mb-2">Erreur de chargement</h2>
             <p>{error || 'Erreur lors du chargement des données.'}</p>
           </div>
@@ -245,7 +245,7 @@ export default function AdminDashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-3 rounded-xl">
-                <span className="text-white text-2xl font-bold">👑</span>
+                <span className="text-white text-2xl font-bold"></span>
               </div>
               <div>
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
@@ -268,10 +268,10 @@ export default function AdminDashboard() {
               <div>
                 <p className="text-gray-500 text-sm font-medium">Total Utilisateurs</p>
                 <p className="text-3xl font-bold text-gray-900">{resume.totalUsers || 0}</p>
-                <p className="text-green-600 text-sm mt-1">↗ +{resume.nouvellesInscriptions || 0} cette semaine</p>
+                <p className="text-green-600 text-sm mt-1"> +{resume.nouvellesInscriptions || 0} cette semaine</p>
               </div>
               <div className="bg-blue-100 p-3 rounded-xl">
-                <span className="text-blue-600 text-2xl">👥</span>
+                <span className="text-blue-600 text-2xl"></span>
               </div>
             </div>
           </div>
@@ -284,7 +284,7 @@ export default function AdminDashboard() {
                 <p className="text-orange-600 text-sm mt-1">{resume.demandesEnAttente || 0} en attente</p>
               </div>
               <div className="bg-green-100 p-3 rounded-xl">
-                <span className="text-green-600 text-2xl">🏥</span>
+                <span className="text-green-600 text-2xl"></span>
               </div>
             </div>
           </div>
@@ -294,10 +294,10 @@ export default function AdminDashboard() {
               <div>
                 <p className="text-gray-500 text-sm font-medium">Clients</p>
                 <p className="text-3xl font-bold text-gray-900">{resume.totalClients || 0}</p>
-                <p className="text-blue-600 text-sm mt-1">👤 Total clients</p>
+                <p className="text-blue-600 text-sm mt-1"> Total clients</p>
               </div>
               <div className="bg-blue-100 p-3 rounded-xl">
-                <span className="text-blue-600 text-2xl">👤</span>
+                <span className="text-blue-600 text-2xl"></span>
               </div>
             </div>
           </div>
@@ -310,7 +310,7 @@ export default function AdminDashboard() {
                 <p className="text-blue-600 text-sm mt-1">{resume.commandesEnAttente || 0} en attente</p>
               </div>
               <div className="bg-purple-100 p-3 rounded-xl">
-                <span className="text-purple-600 text-2xl">📦</span>
+                <span className="text-purple-600 text-2xl"></span>
               </div>
             </div>
           </div>
@@ -320,10 +320,10 @@ export default function AdminDashboard() {
               <div>
                 <p className="text-gray-500 text-sm font-medium">Commandes En Attente</p>
                 <p className="text-3xl font-bold text-gray-900">{resume.commandesEnAttente || 0}</p>
-                <p className="text-blue-600 text-sm mt-1">⏳ En attente</p>
+                <p className="text-blue-600 text-sm mt-1"> En attente</p>
               </div>
               <div className="bg-blue-100 p-3 rounded-xl">
-                <span className="text-blue-600 text-2xl">⏳</span>
+                <span className="text-blue-600 text-2xl"></span>
               </div>
             </div>
           </div>
@@ -333,10 +333,10 @@ export default function AdminDashboard() {
               <div>
                 <p className="text-gray-500 text-sm font-medium">Commandes En Cours</p>
                 <p className="text-3xl font-bold text-gray-900">{resume.commandesEnCours || 0}</p>
-                <p className="text-yellow-600 text-sm mt-1">⏳ En traitement</p>
+                <p className="text-yellow-600 text-sm mt-1">En traitement</p>
               </div>
               <div className="bg-yellow-100 p-3 rounded-xl">
-                <span className="text-yellow-600 text-2xl">⏳</span>
+                <span className="text-yellow-600 text-2xl"></span>
               </div>
             </div>
           </div>
@@ -346,10 +346,10 @@ export default function AdminDashboard() {
               <div>
                 <p className="text-gray-500 text-sm font-medium">Commandes Livrées</p>
                 <p className="text-3xl font-bold text-gray-900">{resume.commandesLivrees || 0}</p>
-                <p className="text-green-600 text-sm mt-1">✅ Complétées</p>
+                <p className="text-green-600 text-sm mt-1"> Complétées</p>
               </div>
               <div className="bg-emerald-100 p-3 rounded-xl">
-                <span className="text-emerald-600 text-2xl">✅</span>
+                <span className="text-emerald-600 text-2xl"></span>
               </div>
             </div>
           </div>
@@ -359,10 +359,10 @@ export default function AdminDashboard() {
               <div>
                 <p className="text-gray-500 text-sm font-medium">Commandes Annulées</p>
                 <p className="text-3xl font-bold text-gray-900">{resume.commandesAnnulees || 0}</p>
-                <p className="text-red-600 text-sm mt-1">❌ Annulées</p>
+                <p className="text-red-600 text-sm mt-1"> Annulées</p>
               </div>
               <div className="bg-red-100 p-3 rounded-xl">
-                <span className="text-red-600 text-2xl">❌</span>
+                <span className="text-red-600 text-2xl"></span>
               </div>
             </div>
           </div>
@@ -373,7 +373,7 @@ export default function AdminDashboard() {
           <div className="mb-8">
             <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
               <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
-                🚨 Alertes importantes 
+                 Alertes importantes 
                 <span className="ml-2 bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full">{alertes.length}</span>
               </h2>
               <div className="grid gap-4">
@@ -412,7 +412,7 @@ export default function AdminDashboard() {
           {inscriptionLabels.length > 0 && (
             <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
               <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                📈 Évolution des inscriptions
+                Évolution des inscriptions
               </h3>
               <Line
                 data={{
@@ -471,7 +471,7 @@ export default function AdminDashboard() {
           {pharmacieStatutLabels.length > 0 && (
             <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
               <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                🏥 Statut des pharmacies
+                 Statut des pharmacies
               </h3>
               <Doughnut
                 data={{
@@ -514,7 +514,7 @@ export default function AdminDashboard() {
           {commandeLabels.length > 0 && (
             <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
               <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                📊 Évolution des commandes
+                 Évolution des commandes
               </h3>
               <Line
                 data={{
@@ -573,7 +573,7 @@ export default function AdminDashboard() {
           {commandesParPharmacieLabels.length > 0 && (
             <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
               <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                🏆 Top 10 Pharmacies
+                 Top 10 Pharmacies
               </h3>
               <Bar
                 data={{
@@ -631,7 +631,7 @@ export default function AdminDashboard() {
           {commandeStatutData.some(count => count > 0) && (
             <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
               <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                📦 Répartition des statuts des commandes
+                 Répartition des statuts des commandes
               </h3>
               <Doughnut
                 data={{
@@ -673,13 +673,13 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
             <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
-              🔔 Notifications 
+               Notifications 
               <span className="ml-2 bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full">{notifications.length}</span>
             </h2>
             <div className="max-h-80 overflow-y-auto">
               {notifications.length === 0 ? (
                 <div className="text-center py-8">
-                  <div className="text-gray-400 text-4xl mb-2">📭</div>
+                  <div className="text-gray-400 text-4xl mb-2"></div>
                   <p className="text-gray-500">Aucune notification</p>
                 </div>
               ) : (
@@ -706,7 +706,7 @@ export default function AdminDashboard() {
                             onClick={() => handleMarquerLu(notification._id)}
                             className="text-red-600 hover:text-red-800 font-medium text-sm"
                           >
-                            ✕
+                            
                           </button>
                         </div>
                       </div>
@@ -719,12 +719,12 @@ export default function AdminDashboard() {
 
           <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
             <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
-              📅 Activités récentes
+               Inscription récentes
             </h2>
             <div className="max-h-80 overflow-y-auto">
               {activiteRecente.length === 0 ? (
                 <div className="text-center py-8">
-                  <div className="text-gray-400 text-4xl mb-2">📊</div>
+                  <div className="text-gray-400 text-4xl mb-2"></div>
                   <p className="text-gray-500">Aucune activité récente</p>
                 </div>
               ) : (
@@ -737,8 +737,8 @@ export default function AdminDashboard() {
                           activite.role === 'client' ? 'bg-blue-100 text-blue-600' :
                           'bg-purple-100 text-purple-600'
                         }`}>
-                          {activite.role === 'pharmacie' ? '🏥' : 
-                           activite.role === 'client' ? '👤' : '👑'}
+                          {activite.role === 'pharmacie' ? '' : 
+                           activite.role === 'client' ? '' : ''}
                         </div>
                         <div className="flex-1">
                           {activite.role === 'pharmacie' ? (

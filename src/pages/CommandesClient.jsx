@@ -19,7 +19,12 @@ export default function CommandesClient() {
   const [socketInstance, setSocketInstance] = useState(null);
 
   useEffect(() => {
-    if (!user?.id) return;
+    console.log('🔍 [CommandesClient] Utilisateur connecté:', user);
+    if (!user?.id) {
+      console.log('🚫 [CommandesClient] Aucun utilisateur connecté, redirection vers /login');
+      navigate('/login');
+      return;
+    }
 
     const token = localStorage.getItem('token');
     if (!token) {
@@ -32,7 +37,6 @@ export default function CommandesClient() {
 
     const initializeConnection = async () => {
       try {
-        // Initialiser Socket.IO
         socket = io(API_URL, {
           auth: { token: `Bearer ${token}` },
           autoConnect: true,
@@ -45,7 +49,6 @@ export default function CommandesClient() {
 
         setSocketInstance(socket);
 
-        // Configuration des événements Socket.IO
         socket.on('connect', () => {
           console.log('✅ [CommandesClient] WebSocket connecté:', socket.id);
           const userRoom = `user_${user.id}`;
@@ -66,7 +69,6 @@ export default function CommandesClient() {
           console.log('✅ [CommandesClient] Salle rejointe confirmée:', data);
         });
 
-        // Écouter les nouvelles notifications
         socket.on('nouvelleNotification', (data) => {
           console.log('🔔 [CommandesClient] Nouvelle notification reçue:', data);
           if (data && data.notification) {
@@ -76,7 +78,6 @@ export default function CommandesClient() {
           }
         });
 
-        // Écouter les nouvelles commandes
         socket.on('nouvelleCommande', (data) => {
           console.log('🔔 [CommandesClient] Nouvelle commande reçue:', data);
           if (data && data.commande) {
@@ -89,60 +90,46 @@ export default function CommandesClient() {
           }
         });
 
-        // Écouter les changements de statut
         socket.on('changementStatutCommande', (data) => {
           console.log('🔔 [CommandesClient] Changement statut reçu:', data);
-          
           if (data && data.commande) {
-            // Mettre à jour les commandes
             setCommandes((prev) =>
               prev.map((cmd) =>
                 cmd._id === data.commande._id ? { ...cmd, statut: data.commande.statut } : cmd
               )
             );
-            
-            // Ajouter la notification
             if (data.notification) {
               setNotifications((prev) => [data.notification, ...prev]);
             }
-            
-            // Afficher le toast
             toast.info(`Mise à jour: ${data.notification?.message || 'Statut modifié'}`);
             playNotificationSound();
           }
         });
 
-        // Écouter quand une notification est marquée comme lue
         socket.on('notificationMarqueLue', (data) => {
           console.log('🔔 [CommandesClient] Notification marquée comme lue:', data);
           if (data && data.notificationId) {
             setNotifications((prev) =>
-              prev.map((notif) => 
+              prev.map((notif) =>
                 notif._id === data.notificationId ? { ...notif, lu: true } : notif
               )
             );
           }
         });
 
-        // Événement de test
         socket.on('pong', (data) => {
           console.log('🏓 [CommandesClient] Pong reçu:', data);
         });
 
-        // Test de connexion
         setTimeout(() => {
           if (socket && socket.connected) {
             socket.emit('ping', { userId: user.id, timestamp: new Date().toISOString() });
           }
         }, 2000);
 
-        // Setup push notifications
         await setupPushNotifications();
-
-        // Charger les données
         await loadCommandes();
         await loadNotifications();
-
       } catch (error) {
         console.error('❌ [CommandesClient] Erreur initialisation:', error);
         setError('Erreur lors de l\'initialisation');
@@ -155,25 +142,18 @@ export default function CommandesClient() {
           const permission = await Notification.requestPermission();
           if (permission === 'granted') {
             console.log('✅ [CommandesClient] Permission de notification accordée');
-            
-            // Enregistrer le service worker
             const registration = await navigator.serviceWorker.register('/service-worker.js');
             console.log('✅ [CommandesClient] Service Worker enregistré:', registration);
-
-            // Attendre que le service worker soit prêt
             await navigator.serviceWorker.ready;
-
             const vapidResponse = await axios.get(`${API_URL}/api/client/vapid-public-key`, {
               headers: { Authorization: `Bearer ${token}` },
             });
             const vapidPublicKey = vapidResponse.data.publicKey;
-
             const subscription = await registration.pushManager.subscribe({
               userVisibleOnly: true,
               applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
             });
             console.log('✅ [CommandesClient] Abonnement push créé:', subscription);
-
             await axios.post(
               `${API_URL}/api/client/subscribe`,
               subscription,
@@ -212,7 +192,6 @@ export default function CommandesClient() {
       }
     };
 
-    // Charger les commandes
     const loadCommandes = async () => {
       try {
         const response = await axios.get(`${API_URL}/api/client/commandes`, {
@@ -235,7 +214,6 @@ export default function CommandesClient() {
       }
     };
 
-    // Charger les notifications
     const loadNotifications = async () => {
       try {
         const response = await axios.get(`${API_URL}/api/client/notifications`, {
@@ -254,7 +232,6 @@ export default function CommandesClient() {
       }
     };
 
-    // Service Worker listener
     const handleServiceWorkerMessage = (event) => {
       if (event.data && event.data.action === 'playNotificationSound') {
         playNotificationSound();
@@ -270,10 +247,8 @@ export default function CommandesClient() {
       navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
     }
 
-    // Initialiser la connexion
     initializeConnection();
 
-    // Cleanup function
     return () => {
       if (cleanupExecuted) return;
       cleanupExecuted = true;
@@ -302,7 +277,6 @@ export default function CommandesClient() {
     };
   }, [navigate, statutFilter, user]);
 
-  // Fonction pour marquer une notification comme lue
   const handleMarquerLue = async (notificationId) => {
     try {
       const token = localStorage.getItem('token');
@@ -311,14 +285,12 @@ export default function CommandesClient() {
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
+
       if (response.data.success) {
         console.log('✅ [CommandesClient] Notification marquée comme lue:', notificationId);
         toast.success('Notification marquée comme lue');
-        
-        // Mettre à jour localement
         setNotifications((prev) =>
-          prev.map((notif) => 
+          prev.map((notif) =>
             notif._id === notificationId ? { ...notif, lu: true } : notif
           )
         );
@@ -376,10 +348,12 @@ export default function CommandesClient() {
   };
 
   if (loading) {
+    console.log('🔄 [CommandesClient] État de chargement actif, bouton non rendu');
     return <div className="p-6 text-white">Chargement...</div>;
   }
 
   if (error) {
+    console.log('❌ [CommandesClient] Erreur détectée, bouton non rendu:', error);
     return (
       <div className="p-6 text-red-600">
         <p>{error}</p>
@@ -390,8 +364,47 @@ export default function CommandesClient() {
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
       <ToastContainer />
+      {/* Bouton Retour au tableau de bord (flottant en haut à gauche) */}
+      <div className="fixed top-6 left-6 z-50">
+        <button
+          onClick={() => {
+            console.log('🚀 [CommandesClient] Tentative de navigation, utilisateur:', user);
+            try {
+              if (user?.role === 'client') {
+                navigate('/client/dashboard');
+              } else if (user?.role === 'pharmacie') {
+                navigate('/pharmacie/dashboard');
+              } else {
+                navigate('/dashboard');
+                console.warn('⚠️ [CommandesClient] Rôle utilisateur non défini, redirection par défaut vers /dashboard');
+              }
+            } catch (err) {
+              console.error('❌ [CommandesClient] Erreur de navigation:', err);
+              toast.error('Erreur lors de la redirection vers le tableau de bord');
+            }
+          }}
+          className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-xl font-semibold hover:from-gray-700 hover:to-gray-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+          aria-label="Retourner au tableau de bord"
+        >
+          <svg
+            className="w-5 h-5 mr-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M10 19l-7-7m0 0l7-7m-7 7h18"
+            />
+          </svg>
+          Retour
+        </button>
+      </div>
+
       <h1 className="text-2xl font-semibold mb-6 text-gray-800">Mes commandes</h1>
-      
+
       <div className="mb-6">
         <label className="mr-2 text-gray-700">Filtrer par statut:</label>
         <select
@@ -417,31 +430,40 @@ export default function CommandesClient() {
                 Commande #{commande._id}
               </h2>
               <p className="text-gray-600">
-                <strong>Pharmacie:</strong> {commande.pharmacyId?.pharmacieInfo?.nomPharmacie || 'Inconnu'}
+                <strong>Pharmacie:</strong>{" "}
+                {commande.pharmacyId?.pharmacieInfo?.nomPharmacie || 'Inconnu'}
               </p>
               <p className="text-gray-600">
-                <strong>Type:</strong> {commande.livraison ? 'Livraison' : 'Récupération en pharmacie'}
+                <strong>Type:</strong>{" "}
+                {commande.livraison ? 'Livraison' : 'Récupération en pharmacie'}
               </p>
               {commande.livraison && (
                 <p className="text-gray-600">
-                  <strong>Adresse:</strong> {commande.adresseLivraison?.adresseTexte || 'Non spécifiée'}
+                  <strong>Adresse:</strong>{" "}
+                  {commande.adresseLivraison?.adresseTexte || 'Non spécifiée'}
                 </p>
               )}
               <p className="text-gray-600">
-                <strong>Statut:</strong> 
-                <span className={`ml-2 px-2 py-1 rounded text-sm ${
-                  commande.statut === 'en_attente' ? 'bg-yellow-100 text-yellow-800' :
-                  commande.statut === 'en_cours' ? 'bg-blue-100 text-blue-800' :
-                  commande.statut === 'terminée' ? 'bg-green-100 text-green-800' :
-                  'bg-red-100 text-red-800'
-                }`}>
+                <strong>Statut:</strong>
+                <span
+                  className={`ml-2 px-2 py-1 rounded text-sm ${
+                    commande.statut === 'en_attente'
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : commande.statut === 'en_cours'
+                      ? 'bg-blue-100 text-blue-800'
+                      : commande.statut === 'terminée'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
+                  }`}
+                >
                   {commande.statut.replace('_', ' ')}
                 </span>
               </p>
               <p className="text-gray-600">
-                <strong>Date:</strong> {new Date(commande.createdAt).toLocaleString()}
+                <strong>Date:</strong>{" "}
+                {new Date(commande.createdAt).toLocaleString()}
               </p>
-              
+
               <h3 className="text-md font-semibold mt-4">Médicaments:</h3>
               <ul className="list-disc pl-5">
                 {commande.medicaments.map((item) => (
@@ -452,18 +474,21 @@ export default function CommandesClient() {
                           src={`${API_URL}/Uploads/medicaments/${item.image.nomFichier}`}
                           alt={item.nom}
                           className="w-12 h-12 object-cover mr-2 rounded"
-                          onError={(e) => {
-                            console.error(`❌ [CommandesClient] Échec chargement image: ${API_URL}/Uploads/medicaments/${item.image.nomFichier}`, e);
-                            e.target.src = '/default-medicament.jpg';
+                          onError={({ currentTarget }) => {
+                            console.error(
+                              `❌ [CommandesClient] Échec chargement image: ${API_URL}/Uploads/medicaments/${item.image.nomFichier}`
+                            );
+                            currentTarget.src = '/default-medicament.jpg';
                           }}
                         />
                       ) : (
-                        <div className="w-12 h-12 bg-gray-200 mr-2 flex items-center justify-content-center rounded">
+                        <div className="w-12 h-12 bg-gray-200 mr-2 flex items-center justify-center rounded">
                           Aucune image
                         </div>
                       )}
                       <span>
-                        {item.nom} (x{item.quantite}) - {item.prix * item.quantite} FCFA
+                        {item.nom} (x{item.quantite}) -{' '}
+                        {item.prix * item.quantite} FCFA
                       </span>
                     </div>
                   </li>
@@ -481,7 +506,7 @@ export default function CommandesClient() {
         </div>
       )}
 
-      <div className="mb-6">
+      <div className="mt-6">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Notifications</h2>
         {notifications.length === 0 ? (
           <p className="text-gray-600">Aucune notification.</p>
@@ -490,11 +515,16 @@ export default function CommandesClient() {
             {notifications
               .filter((notif) => !notif.lu)
               .map((notif) => (
-                <div key={notif._id} className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
+                <div
+                  key={notif._id}
+                  className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded"
+                >
                   <div className="flex justify-between items-center">
                     <div>
                       <p className="text-gray-800">{notif.message}</p>
-                      <p className="text-sm text-gray-600">{new Date(notif.date).toLocaleString()}</p>
+                      <p className="text-sm text-gray-600">
+                        {new Date(notif.date).toLocaleString()}
+                      </p>
                     </div>
                     <button
                       onClick={() => handleMarquerLue(notif._id)}

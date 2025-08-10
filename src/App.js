@@ -36,7 +36,7 @@ import MedicamentsList from './pages/MedicamentsList';
 import CommandeDetails from './pages/dashboards/CommandeDetails';
 import CommandesClient from './pages/CommandesClient'; // Ajouter l'importation
 import CommandesPharmacie from './pages/CommandesPharmacie';
-
+import DemandeIntegrationList from './pages/pharmacie/DemandeIntegrationList'; // Nouvelle importation
 import './App.css';
 
 function App() {
@@ -63,6 +63,7 @@ function App() {
             <Route path="/admin-dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
             <Route path="/client-dashboard" element={<ClientProtectedRoute><ClientDashboard /></ClientProtectedRoute>} />
             <Route path="/pharmacie/dashboard" element={<PharmacyProtectedRoute><PharmacieDashboard /></PharmacyProtectedRoute>} />
+            <Route path="/pharmacie/demandes-integration" element={<PharmacyProtectedRoute><DemandeIntegrationList /></PharmacyProtectedRoute>} /> {/* Nouvelle route */}
             <Route path="/pharmacie/profil" element={<PharmacyProtectedRoute><PharmacyProfile /></PharmacyProtectedRoute>} />
             <Route path="/pharmacie/connexion" element={<ClientProtectedRoute><ConnexionPharmacie /></ClientProtectedRoute>} />
             <Route path="/connexion-pharmacie" element={<Navigate to="/pharmacie/connexion" />} />
