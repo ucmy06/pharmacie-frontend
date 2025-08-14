@@ -1,29 +1,34 @@
-// C:\reactjs node mongodb\pharmacie-frontend\src\pages\pharmacie\DemandeIntegrationList.jsx
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useAuth } from '../../hooks/useAuth';
 
 const API_URL = 'http://localhost:3001';
 
 export default function DemandeIntegrationList() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [demandes, setDemandes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [inputs, setInputs] = useState({});
 
   useEffect(() => {
     const token = localStorage.getItem('pharmacyToken');
-    if (!token) {
+    if (!token || !user?.pharmaciesAssociees?.length) {
       navigate('/pharmacie/connexion');
       return;
     }
+
+    const pharmacyId = user.pharmaciesAssociees[0].pharmacyId;
 
     const fetchDemandes = async () => {
       try {
         const response = await axios.get(`${API_URL}/api/pharmacies/demandes-integration`, {
           headers: { Authorization: `Bearer ${token}` },
+          params: { pharmacyId },
         });
 
         if (response.data.success) {
@@ -40,19 +45,42 @@ export default function DemandeIntegrationList() {
     };
 
     fetchDemandes();
-  }, [navigate]);
+  }, [navigate, user]);
 
-  const handleApprouver = async (demandeId, messageApprobation) => {
+  const handleInputChange = (demandeId, field, value) => {
+    setInputs((prev) => ({
+      ...prev,
+      [demandeId]: {
+        ...prev[demandeId],
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleApprouver = async (demandeId) => {
+    const password = inputs[demandeId]?.password;
+    if (!password) {
+      toast.error('Veuillez entrer un mot de passe temporaire');
+      return;
+    }
+
     try {
       const response = await axios.post(
         `${API_URL}/api/pharmacies/valider-demande-integration`,
-        { demandeId, statut: 'approuvee', messageApprobation },
-        { headers: { Authorization: `Bearer ${localStorage.getItem('pharmacyToken')}` } }
+        { demandeId, statut: 'approuvee', password },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem('pharmacyToken')}` },
+          params: { pharmacyId: user.pharmaciesAssociees[0].pharmacyId },
+        }
       );
 
       if (response.data.success) {
         toast.success('Demande approuvée avec succès');
-        setDemandes(demandes.filter(d => d._id !== demandeId));
+        setDemandes(demandes.filter((d) => d._id !== demandeId));
+        setInputs((prev) => {
+          const { [demandeId]: _, ...rest } = prev;
+          return rest;
+        });
       } else {
         toast.error(response.data.message || 'Erreur lors de l\'approbation');
       }
@@ -62,17 +90,30 @@ export default function DemandeIntegrationList() {
     }
   };
 
-  const handleRejeter = async (demandeId, motifRejet) => {
+  const handleRejeter = async (demandeId) => {
+    const motifRejet = inputs[demandeId]?.motifRejet;
+    if (!motifRejet) {
+      toast.error('Veuillez entrer un motif de rejet');
+      return;
+    }
+
     try {
       const response = await axios.post(
         `${API_URL}/api/pharmacies/valider-demande-integration`,
         { demandeId, statut: 'rejetee', motifRejet },
-        { headers: { Authorization: `Bearer ${localStorage.getItem('pharmacyToken')}` } }
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem('pharmacyToken')}` },
+          params: { pharmacyId: user.pharmaciesAssociees[0].pharmacyId },
+        }
       );
 
       if (response.data.success) {
         toast.success('Demande rejetée avec succès');
-        setDemandes(demandes.filter(d => d._id !== demandeId));
+        setDemandes(demandes.filter((d) => d._id !== demandeId));
+        setInputs((prev) => {
+          const { [demandeId]: _, ...rest } = prev;
+          return rest;
+        });
       } else {
         toast.error(response.data.message || 'Erreur lors du rejet');
       }
@@ -103,26 +144,30 @@ export default function DemandeIntegrationList() {
                 <p><strong>Date :</strong> {new Date(demande.dateDemande).toLocaleString()}</p>
                 <div className="mt-4 flex gap-4">
                   <input
-                    type="text"
-                    placeholder="Mot de passe ou message pour l'employé"
-                    onChange={(e) => demande.messageApprobation = e.target.value}
+                    type="password"
+                    placeholder="Mot de passe temporaire pour l'employé"
+                    value={inputs[demande._id]?.password || ''}
+                    onChange={(e) => handleInputChange(demande._id, 'password', e.target.value)}
                     className="p-2 border rounded"
                   />
                   <button
-                    onClick={() => handleApprouver(demande._id, demande.messageApprobation)}
+                    onClick={() => handleApprouver(demande._id)}
                     className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+                    disabled={!inputs[demande._id]?.password}
                   >
                     Approuver
                   </button>
                   <input
                     type="text"
                     placeholder="Motif du rejet"
-                    onChange={(e) => demande.motifRejet = e.target.value}
+                    value={inputs[demande._id]?.motifRejet || ''}
+                    onChange={(e) => handleInputChange(demande._id, 'motifRejet', e.target.value)}
                     className="p-2 border rounded"
                   />
                   <button
-                    onClick={() => handleRejeter(demande._id, demande.motifRejet)}
+                    onClick={() => handleRejeter(demande._id)}
                     className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
+                    disabled={!inputs[demande._id]?.motifRejet}
                   >
                     Rejeter
                   </button>

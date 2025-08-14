@@ -1,9 +1,8 @@
-// C:\reactjs node mongodb\pharmacie-frontend\src\pages\CommandesPharmacie.jsx
-
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { toast, Toaster } from 'react-hot-toast';
 import io from 'socket.io-client';
+import { useNavigate } from 'react-router-dom';
 import {
   Table,
   TableBody,
@@ -35,6 +34,7 @@ const CommandesPharmacie = () => {
   const [selectedCommande, setSelectedCommande] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const socketRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const pharmacyInfo = JSON.parse(localStorage.getItem('pharmacyInfo') || '{}');
@@ -53,7 +53,6 @@ const CommandesPharmacie = () => {
       return;
     }
 
-    // Initialiser Socket.IO
     const socket = io('http://localhost:3001', {
       auth: { token: `Bearer ${token}` },
       reconnection: true,
@@ -131,13 +130,12 @@ const CommandesPharmacie = () => {
     socket.on('notificationMarqueLue', (data) => {
       console.log('🔔 [CommandesPharmacie] Notification marquée comme lue:', data);
       setNotifications((prev) =>
-        prev.map((notif) => 
+        prev.map((notif) =>
           notif._id === data.notificationId ? { ...notif, lu: true } : notif
         )
       );
     });
 
-    // Test de connexion
     setTimeout(() => {
       if (socket.connected) {
         socket.emit('ping', { userId: pharmacyId, timestamp: new Date().toISOString() });
@@ -275,38 +273,36 @@ const CommandesPharmacie = () => {
     }
   };
 
-const handleMarquerLue = async (notificationId) => {
-  try {
-    const token = localStorage.getItem('pharmacyToken');
-    const pharmacyInfo = JSON.parse(localStorage.getItem('pharmacyInfo') || '{}');
-    const pharmacyId = pharmacyInfo._id;
-    
-    console.log('🔄 [handleMarquerLue] Début:', { notificationId, pharmacyId });
-    
-    // Utiliser la route correcte pour les notifications
-    const response = await axios.put(
-      `http://localhost:3001/api/notifications/${notificationId}/marquer-lue`,
-      { pharmacyId }, // Envoyer pharmacyId dans le body
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    
-    console.log('✅ [handleMarquerLue] Réponse:', response.data);
-    
-    if (response.data.success) {
-      // Mettre à jour localement
-      setNotifications((prev) =>
-        prev.map((notif) => (notif._id === notificationId ? { ...notif, lu: true } : notif))
+  const handleMarquerLue = async (notificationId) => {
+    try {
+      const token = localStorage.getItem('pharmacyToken');
+      const pharmacyInfo = JSON.parse(localStorage.getItem('pharmacyInfo') || '{}');
+      const pharmacyId = pharmacyInfo._id;
+
+      console.log('🔄 [handleMarquerLue] Début:', { notificationId, pharmacyId });
+
+      const response = await axios.put(
+        `http://localhost:3001/api/notifications/${notificationId}/marquer-lue`,
+        { pharmacyId },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast.success('Notification marquée comme lue');
-    } else {
-      toast.error(response.data.message || 'Erreur lors du marquage');
+
+      console.log('✅ [handleMarquerLue] Réponse:', response.data);
+
+      if (response.data.success) {
+        setNotifications((prev) =>
+          prev.map((notif) => (notif._id === notificationId ? { ...notif, lu: true } : notif))
+        );
+        toast.success('Notification marquée comme lue');
+      } else {
+        toast.error(response.data.message || 'Erreur lors du marquage');
+      }
+    } catch (error) {
+      console.error('❌ [handleMarquerLue] Erreur:', error);
+      const errorMessage = error.response?.data?.message || 'Erreur lors du marquage de la notification';
+      toast.error(errorMessage);
     }
-  } catch (error) {
-    console.error('❌ [handleMarquerLue] Erreur:', error);
-    const errorMessage = error.response?.data?.message || 'Erreur lors du marquage de la notification';
-    toast.error(errorMessage);
-  }
-};
+  };
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
@@ -316,6 +312,58 @@ const handleMarquerLue = async (notificationId) => {
   return (
     <Box sx={{ padding: 3 }}>
       <Toaster />
+      {/* Bouton Retour flottant */}
+      <Box
+        sx={{
+          position: 'fixed',
+          top: 16,
+          left: 16,
+          zIndex: 1300,
+        }}
+      >
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
+            </svg>
+          }
+          onClick={() => {
+            console.log('🚀 [CommandesPharmacie] Tentative de navigation vers /pharmacie/dashboard');
+            try {
+              navigate('/pharmacie/dashboard');
+            } catch (err) {
+              console.error('❌ [CommandesPharmacie] Erreur de navigation:', err);
+              toast.error('Erreur lors de la redirection vers le tableau de bord');
+            }
+          }}
+          sx={{
+            borderRadius: '20px',
+            textTransform: 'none',
+            fontWeight: 'medium',
+            boxShadow: 3,
+            '&:hover': {
+              boxShadow: 6,
+              transform: 'scale(1.02)',
+              transition: 'all 0.2s',
+            },
+          }}
+        >
+          Retour au tableau de bord
+        </Button>
+      </Box>
+
       {error && (
         <Typography color="error" sx={{ mb: 2 }}>
           {error}
@@ -454,11 +502,11 @@ const handleMarquerLue = async (notificationId) => {
                   </Button>
                 )
               }
-              sx={{ 
-                mb: 1, 
-                bgcolor: notif.lu ? 'background.paper' : 'action.hover', 
-                borderRadius: 1, 
-                boxShadow: 1 
+              sx={{
+                mb: 1,
+                bgcolor: notif.lu ? 'background.paper' : 'action.hover',
+                borderRadius: 1,
+                boxShadow: 1,
               }}
             >
               <ListItemText

@@ -206,14 +206,13 @@ export default function PharmacieDashboard() {
               </span>
             )}
           </button>
-          {isCreatedBy && (
             <button
               onClick={() => navigate('/pharmacie/demandes-integration')}
               className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
             >
               Gérer les demandes d'intégration
             </button>
-          )}
+          
           <button
             onClick={handleLogout}
             className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors"

@@ -23,14 +23,37 @@ export default function ConnexionPharmacie() {
       return;
     }
 
-    // Récupérer l'email depuis demandePharmacie
-    const email = user.demandePharmacie?.informationsPharmacie?.emailPharmacie || '';
-    setEmailPharmacie(email);
-    if (!email) {
+    // Récupérer l'email depuis pharmaciesAssociees
+    const pharmacy = user.pharmaciesAssociees?.[0]; // Prend la première pharmacie associée
+    if (!pharmacy || !pharmacy.pharmacyId) {
       setError('Aucune pharmacie associée trouvée');
       console.warn('⚠️ [PharmacyLogin] Aucune pharmacie associée:', { userId: user?._id });
       toast.error('Aucune pharmacie associée trouvée');
+      return;
     }
+
+    // Requête API pour récupérer l'email de la pharmacie
+    const fetchPharmacyEmail = async () => {
+      try {
+        console.log('📤 [PharmacyLogin] Récupération email pharmacie:', pharmacy.pharmacyId);
+        const res = await axios.get(`http://localhost:3001/api/pharmacies/by-id/${pharmacy.pharmacyId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const pharmacyEmail = res.data.email;
+        setEmailPharmacie(pharmacyEmail);
+        console.log('✅ [PharmacyLogin] Email pharmacie récupéré:', pharmacyEmail);
+      } catch (err) {
+        console.error('❌ [PharmacyLogin] Erreur récupération email:', {
+          status: err.response?.status,
+          data: err.response?.data,
+          message: err.message,
+        });
+        setError('Erreur lors de la récupération des informations de la pharmacie');
+        toast.error('Erreur lors de la récupération des informations de la pharmacie');
+      }
+    };
+
+    fetchPharmacyEmail();
   }, [user, token, navigate]);
 
   const handleChange = (e) => {

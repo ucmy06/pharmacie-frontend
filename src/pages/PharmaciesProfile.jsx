@@ -1,4 +1,3 @@
-// C:\reactjs node mongodb\pharmacie-frontend\src\pages\PharmaciesProfile.jsx
 import axios from 'axios';
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -12,17 +11,13 @@ import 'react-toastify/dist/ReactToastify.css';
 
 const API_URL = 'http://localhost:3001';
 
-// 🔍 Fonction pour résoudre les URLs courtes Google Maps
+// Fonction pour résoudre les URLs courtes Google Maps
 async function resolveGoogleMapsUrl(shortUrl) {
   console.log('🔄 Résolution de l\'URL courte:', shortUrl);
-  
   try {
-    // Utiliser fetch avec mode 'no-cors' pour éviter les problèmes CORS
     const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(shortUrl)}`);
     const data = await response.json();
-    
     if (data.contents) {
-      // Chercher les coordonnées dans le contenu HTML
       const coords = extractCoordinatesFromHtml(data.contents);
       if (coords) {
         console.log('✅ Coordonnées extraites de l\'URL courte:', coords);
@@ -32,8 +27,6 @@ async function resolveGoogleMapsUrl(shortUrl) {
   } catch (error) {
     console.log('❌ Erreur lors de la résolution de l\'URL courte:', error);
   }
-  
-  // Fallback: essayer de suivre la redirection manuellement
   try {
     const proxyUrl = `https://cors-anywhere.herokuapp.com/${shortUrl}`;
     const response = await fetch(proxyUrl, { method: 'HEAD' });
@@ -46,7 +39,7 @@ async function resolveGoogleMapsUrl(shortUrl) {
   }
 }
 
-// 🔍 Fonction pour extraire les coordonnées du HTML
+// Fonction pour extraire les coordonnées du HTML
 function extractCoordinatesFromHtml(html) {
   const patterns = [
     /"coords":\[([^,]+),([^,]+)\]/,
@@ -54,13 +47,11 @@ function extractCoordinatesFromHtml(html) {
     /center=([^,]+),([^&]+)/,
     /@([^,]+),([^,]+),/
   ];
-  
   for (const pattern of patterns) {
     const match = html.match(pattern);
     if (match) {
       const latitude = parseFloat(match[1]);
       const longitude = parseFloat(match[2]);
-      
       if (!isNaN(latitude) && !isNaN(longitude) && 
           latitude >= -90 && latitude <= 90 && 
           longitude >= -180 && longitude <= 180) {
@@ -71,19 +62,15 @@ function extractCoordinatesFromHtml(html) {
   return null;
 }
 
-// 🔍 Fonction pour extraire les coordonnées de l'URL Google Maps
+// Fonction pour extraire les coordonnées de l'URL Google Maps
 function extractCoordinates(url) {
   console.log('🔍 URL à analyser:', url);
-  
   if (!url || typeof url !== 'string') {
     console.log('❌ URL invalide ou manquante');
     return null;
   }
-
   const cleanUrl = url.trim();
   console.log('🧹 URL nettoyée:', cleanUrl);
-
-  // Patterns pour capturer différents formats d'URL Google Maps
   const patterns = [
     /maps\?q=([-+]?\d*\.?\d+),([-+]?\d*\.?\d+)/,
     /maps\/place\/@([-+]?\d*\.?\d+),([-+]?\d*\.?\d+)/,
@@ -93,42 +80,32 @@ function extractCoordinates(url) {
     /center=([-+]?\d*\.?\d+),([-+]?\d*\.?\d+)/,
     /([-+]?\d{1,2}\.\d+),([-+]?\d{1,3}\.\d+)/
   ];
-
   for (let i = 0; i < patterns.length; i++) {
     const match = cleanUrl.match(patterns[i]);
     if (match) {
       const latitude = parseFloat(match[1]);
       const longitude = parseFloat(match[2]);
-      
       if (!isNaN(latitude) && !isNaN(longitude) && 
           latitude >= -90 && latitude <= 90 && 
           longitude >= -180 && longitude <= 180) {
-        
         console.log('✅ Coordonnées extraites avec le pattern', i + 1, ':', { latitude, longitude });
         return { latitude, longitude };
       }
     }
   }
-  
   console.log('❌ Aucun pattern ne correspond à l\'URL');
   return null;
 }
 
-// 🔍 Fonction principale pour obtenir les coordonnées
+// Fonction principale pour obtenir les coordonnées
 async function getCoordinates(url) {
   if (!url) return null;
-  
-  // Si c'est déjà une URL avec coordonnées
   if (url.includes('q=') || url.includes('@')) {
     return extractCoordinates(url);
   }
-  
-  // Si c'est une URL courte Google Maps
   if (url.includes('maps.app.goo.gl') || url.includes('goo.gl')) {
     return await resolveGoogleMapsUrl(url);
   }
-  
-  // Essayer l'extraction directe
   return extractCoordinates(url);
 }
 
@@ -142,7 +119,6 @@ export default function PharmacyProfile() {
   const [coords, setCoords] = useState(null);
   const [loadingCoords, setLoadingCoords] = useState(false);
   const [mapKey, setMapKey] = useState(0);
-  const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -158,16 +134,13 @@ export default function PharmacyProfile() {
         const response = await axios.get(`${API_URL}/api/pharmacies/${pharmacyId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        
         if (response.data.success) {
           console.log('✅ Données de la pharmacie récupérées:', response.data.pharmacie);
           setPharmacy(response.data.pharmacie);
-          
           const info = response.data.pharmacie.pharmacieInfo || {};
           if (info.adresseGoogleMaps) {
             setLoadingCoords(true);
             console.log('🔄 Extraction des coordonnées pour:', info.adresseGoogleMaps);
-            
             try {
               const coordinates = await getCoordinates(info.adresseGoogleMaps);
               setCoords(coordinates);
@@ -204,13 +177,12 @@ export default function PharmacyProfile() {
     try {
       const response = await axios.post(
         `${API_URL}/api/pharmacies/demande-integration`,
-        { pharmacyId, message },
+        { pharmacyId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (response.data.success) {
         toast.success('Demande d\'intégration envoyée avec succès');
-        setMessage('');
       } else {
         toast.error(response.data.message || 'Erreur lors de l\'envoi de la demande');
       }
@@ -301,14 +273,6 @@ export default function PharmacyProfile() {
         {/* 📝 Demande d'intégration */}
         <div className="mt-6">
           <h2 className="text-lg font-bold text-gray-800 mb-3">Demander à rejoindre la pharmacie</h2>
-          <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Message optionnel pour accompagner votre demande"
-            className="w-full p-2 border rounded mb-2"
-            rows={4}
-            disabled={submitting}
-          />
           <button
             onClick={handleDemandeIntegration}
             className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 disabled:opacity-50"
@@ -321,13 +285,11 @@ export default function PharmacyProfile() {
         {/* 🗺️ Carte */}
         <div className="mt-6">
           <h2 className="text-lg font-bold text-gray-800 mb-2">Localisation sur la carte</h2>
-          
           <div className="mb-4 p-3 bg-gray-50 rounded-lg text-sm">
             <p><strong>URL Google Maps :</strong> {info.adresseGoogleMaps || 'Non définie'}</p>
             <p><strong>Coordonnées extraites :</strong> {coords ? `${coords.latitude}, ${coords.longitude}` : 'Aucune'}</p>
             {loadingCoords && <p className="text-blue-600">🔄 Extraction des coordonnées en cours...</p>}
           </div>
-
           {loadingCoords ? (
             <div className="h-80 w-full rounded-lg bg-gray-100 flex items-center justify-center border-2 border-dashed border-gray-300">
               <div className="text-center text-gray-500">
