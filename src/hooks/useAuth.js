@@ -1,3 +1,5 @@
+// C:\reactjs node mongodb\pharmacie-frontend\src\hooks\useAuth.js
+
 import { useContext, createContext, useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
 
@@ -63,13 +65,66 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('pharmacyToken');
   };
 
+  // Fonction pour mettre à jour les données utilisateur
+  const updateUser = (updatedUserData) => {
+    console.log('🔄 [useAuth] Mise à jour utilisateur:', updatedUserData);
+    
+    const updatedUser = {
+      ...user,
+      ...updatedUserData,
+      id: updatedUserData._id || updatedUserData.id || user.id,
+    };
+    
+    setUser(updatedUser);
+    localStorage.setItem('userInfo', JSON.stringify(updatedUser));
+    console.log('✅ [useAuth] Utilisateur mis à jour:', updatedUser);
+  };
+
+  // Fonction pour rafraîchir le token (optionnel)
+  const refreshToken = (newToken) => {
+    console.log('🔄 [useAuth] Rafraîchissement token');
+    setToken(newToken);
+    localStorage.setItem('token', newToken);
+  };
+
+  // Vérifier si l'utilisateur est authentifié
+  const isAuthenticated = Boolean(user && token);
+
+  // Vérifier si l'utilisateur a un rôle spécifique
+  const hasRole = (role) => {
+    return user?.role === role;
+  };
+
+  // Vérifier si l'utilisateur est vérifié
+  const isVerified = user?.isVerified || false;
+
+  const value = {
+    user,
+    setUser: updateUser, // Exposer setUser pour la compatibilité
+    token,
+    isLoading,
+    isAuthenticated,
+    isVerified,
+    login,
+    logout,
+    updateUser,
+    refreshToken,
+    hasRole,
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 }
 
 export function useAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  
+  return context;
 }

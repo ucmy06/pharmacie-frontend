@@ -37,6 +37,11 @@ import CommandeDetails from './pages/dashboards/CommandeDetails';
 import CommandesClient from './pages/CommandesClient'; // Ajouter l'importation
 import CommandesPharmacie from './pages/CommandesPharmacie';
 import DemandeIntegrationList from './pages/pharmacie/DemandeIntegrationList'; // Nouvelle importation
+import ConnexionsList from './pages/pharmacie/ConnexionsList';
+import AdminClientList from './pages/admin/AdminClientList';
+import UserProfile from './pages/GererProfile';
+
+import AdminPharmacyList from './pages/admin/AdminPharmacyList';
 import './App.css';
 
 function App() {
@@ -80,11 +85,14 @@ function App() {
             <Route path="/medicaments" element={<MedicamentsList />} />
             <Route path="/admin/pharmacies/database" element={<ProtectedRoute><AdminConnectDatabase /></ProtectedRoute>} />
             <Route path="/admin/modification-requests" element={<ProtectedRoute><AdminModificationRequests /></ProtectedRoute>} />
-
+            <Route path="/admin/clients" element={<AdminClientList />} />
+            <Route path="/admin/pharmacies" element={<AdminPharmacyList />} />
             <Route path="/admin/ManageMedicamentImages" element={<ProtectedRoute><ManageMedicamentImages /></ProtectedRoute>} />
             <Route path="/admin/commande/:id" element={<ProtectedRoute><CommandeDetails /></ProtectedRoute>} />
             <Route path="/commandes" element={<ClientProtectedRoute><CommandesClient /></ClientProtectedRoute>} /> {/* Nouvelle route */}
             <Route path="/pharmacie/commandes" element={<PharmacyProtectedRoute><CommandesPharmacie /></PharmacyProtectedRoute>} />
+            <Route path="/pharmacie/connexions" element={<ConnexionsList />} />
+            <Route path="/profile" element={<UserProfile />} />
 
             <Route path="*" element={<div>404 - Page non trouvée</div>} />
           </Route>

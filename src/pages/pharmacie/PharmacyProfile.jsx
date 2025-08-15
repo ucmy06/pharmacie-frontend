@@ -14,7 +14,7 @@ export default function PharmacyProfile() {
       samedi: { ouvert: false, debut: '', fin: '' },
       dimanche: { ouvert: false, debut: '', fin: '' }
     },
-    livraisonDisponible: false,
+    // livraisonDisponible: false,
     periodeGarde: { debut: '', fin: '' }
   });
   const [demandeModification, setDemandeModification] = useState({

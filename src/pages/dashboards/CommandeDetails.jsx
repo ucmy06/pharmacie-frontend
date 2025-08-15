@@ -70,10 +70,10 @@ export default function CommandeDetails() {
             <p><strong>Pharmacie :</strong> {commande.pharmacyId.pharmacieInfo.nomPharmacie}</p>
             <p><strong>Statut :</strong> {commande.statut}</p>
             <p><strong>Total :</strong> {commande.total} Francs</p>
-            <p><strong>Livraison :</strong> {commande.livraison ? 'Oui' : 'Non'}</p>
+            {/* <p><strong>Livraison :</strong> {commande.livraison ? 'Oui' : 'Non'}</p>
             {commande.livraison && (
               <p><strong>Adresse de livraison :</strong> {commande.adresseLivraison}</p>
-            )}
+            )} */}
             <p><strong>Date :</strong> {new Date(commande.dateCommande).toLocaleString()}</p>
           </div>
           <div>

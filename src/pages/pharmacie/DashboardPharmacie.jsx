@@ -53,7 +53,7 @@ export default function DashboardPharmacie() {
         <p><strong>Nom:</strong> {nom}</p>
         <p><strong>Email:</strong> {email}</p>
         <p><strong>Numéro:</strong> {pharmacieInfo.numeroPharmacie}</p>
-        <p><strong>Livraison disponible:</strong> {pharmacieInfo.livraisonDisponible ? 'Oui' : 'Non'}</p>
+        {/* <p><strong>Livraison disponible:</strong> {pharmacieInfo.livraisonDisponible ? 'Oui' : 'Non'}</p> */}
 
         <div className="mt-4 flex gap-4">
           <button

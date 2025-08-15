@@ -17,6 +17,7 @@ export default function CommandesClient() {
   const [error, setError] = useState(null);
   const [statutFilter, setStatutFilter] = useState('');
   const [socketInstance, setSocketInstance] = useState(null);
+  const imageCache = new Map();
 
   useEffect(() => {
     if (!user?.id) return;
@@ -47,28 +48,28 @@ export default function CommandesClient() {
 
         // Configuration des événements Socket.IO
         socket.on('connect', () => {
-          console.log('✅ [CommandesClient] WebSocket connecté:', socket.id);
+          console.log('WebSocket connecté:', socket.id);
           const userRoom = `user_${user.id}`;
           socket.emit('joinRoom', userRoom);
-          console.log('📡 [CommandesClient] Rejoint salle WebSocket:', userRoom);
+          console.log('Rejoint salle WebSocket:', userRoom);
         });
 
         socket.on('connect_error', (error) => {
-          console.error('❌ [CommandesClient] Erreur connexion WebSocket:', error);
+          console.error('Erreur connexion WebSocket:', error);
           toast.error('Erreur de connexion WebSocket');
         });
 
         socket.on('disconnect', (reason) => {
-          console.log('📡 [CommandesClient] WebSocket déconnecté, raison:', reason);
+          console.log('WebSocket déconnecté, raison:', reason);
         });
 
         socket.on('roomJoined', (data) => {
-          console.log('✅ [CommandesClient] Salle rejointe confirmée:', data);
+          console.log('Salle rejointe confirmée:', data);
         });
 
         // Écouter les nouvelles notifications
         socket.on('nouvelleNotification', (data) => {
-          console.log('🔔 [CommandesClient] Nouvelle notification reçue:', data);
+          console.log('Nouvelle notification reçue:', data);
           if (data && data.notification) {
             setNotifications((prev) => [data.notification, ...prev]);
             toast.info(`Notification: ${data.notification.message}`);
@@ -78,7 +79,7 @@ export default function CommandesClient() {
 
         // Écouter les nouvelles commandes
         socket.on('nouvelleCommande', (data) => {
-          console.log('🔔 [CommandesClient] Nouvelle commande reçue:', data);
+          console.log('Nouvelle commande reçue:', data);
           if (data && data.commande) {
             setCommandes((prev) => [data.commande, ...prev]);
             if (data.notification) {
@@ -91,7 +92,7 @@ export default function CommandesClient() {
 
         // Écouter les changements de statut
         socket.on('changementStatutCommande', (data) => {
-          console.log('🔔 [CommandesClient] Changement statut reçu:', data);
+          console.log('Changement statut reçu:', data);
           
           if (data && data.commande) {
             // Mettre à jour les commandes
@@ -114,7 +115,7 @@ export default function CommandesClient() {
 
         // Écouter quand une notification est marquée comme lue
         socket.on('notificationMarqueLue', (data) => {
-          console.log('🔔 [CommandesClient] Notification marquée comme lue:', data);
+          console.log('Notification marquée comme lue:', data);
           if (data && data.notificationId) {
             setNotifications((prev) =>
               prev.map((notif) => 
@@ -126,7 +127,7 @@ export default function CommandesClient() {
 
         // Événement de test
         socket.on('pong', (data) => {
-          console.log('🏓 [CommandesClient] Pong reçu:', data);
+          console.log('Pong reçu:', data);
         });
 
         // Test de connexion
@@ -144,7 +145,7 @@ export default function CommandesClient() {
         await loadNotifications();
 
       } catch (error) {
-        console.error('❌ [CommandesClient] Erreur initialisation:', error);
+        console.error('Erreur initialisation:', error);
         setError('Erreur lors de l\'initialisation');
       }
     };
@@ -154,11 +155,11 @@ export default function CommandesClient() {
         try {
           const permission = await Notification.requestPermission();
           if (permission === 'granted') {
-            console.log('✅ [CommandesClient] Permission de notification accordée');
+            console.log('Permission de notification accordée');
             
             // Enregistrer le service worker
             const registration = await navigator.serviceWorker.register('/service-worker.js');
-            console.log('✅ [CommandesClient] Service Worker enregistré:', registration);
+            console.log('Service Worker enregistré:', registration);
 
             // Attendre que le service worker soit prêt
             await navigator.serviceWorker.ready;
@@ -172,23 +173,23 @@ export default function CommandesClient() {
               userVisibleOnly: true,
               applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
             });
-            console.log('✅ [CommandesClient] Abonnement push créé:', subscription);
+            console.log('Abonnement push créé:', subscription);
 
             await axios.post(
               `${API_URL}/api/client/subscribe`,
               subscription,
               { headers: { Authorization: `Bearer ${token}` } }
             );
-            console.log('✅ [CommandesClient] Abonnement push envoyé au backend');
+            console.log('Abonnement push envoyé au backend');
           } else {
-            console.warn('⚠️ [CommandesClient] Permission de notification refusée');
+            console.warn('Permission de notification refusée');
           }
         } catch (error) {
-          console.error('❌ [CommandesClient] Erreur configuration notifications push:', error);
+          console.error('Erreur configuration notifications push:', error);
           toast.error('Erreur lors de la configuration des notifications push');
         }
       } else {
-        console.warn('⚠️ [CommandesClient] Notifications push non supportées par le navigateur');
+        console.warn('Notifications push non supportées par le navigateur');
       }
     };
 
@@ -206,9 +207,9 @@ export default function CommandesClient() {
     const playNotificationSound = () => {
       try {
         const audio = new Audio('/notification.mp3');
-        audio.play().catch((err) => console.error('❌ [CommandesClient] Erreur lecture son:', err));
+        audio.play().catch((err) => console.error('Erreur lecture son:', err));
       } catch (error) {
-        console.error('❌ [CommandesClient] Erreur création audio:', error);
+        console.error('Erreur création audio:', error);
       }
     };
 
@@ -219,7 +220,7 @@ export default function CommandesClient() {
           headers: { Authorization: `Bearer ${token}` },
           params: { statut: statutFilter || undefined },
         });
-        console.log('🔍 [CommandesClient] Réponse API commandes:', response.data);
+        console.log('Réponse API commandes:', response.data);
         if (response.data.success) {
           setCommandes(response.data.data.commandes);
         } else {
@@ -227,7 +228,7 @@ export default function CommandesClient() {
           toast.error(response.data.message || 'Erreur lors du chargement des commandes');
         }
       } catch (err) {
-        console.error('❌ [CommandesClient] Erreur chargement commandes:', err);
+        console.error('Erreur chargement commandes:', err);
         setError(`Erreur serveur: ${err.response?.data?.message || err.message}`);
         toast.error(`Erreur serveur: ${err.response?.data?.message || err.message}`);
       } finally {
@@ -242,14 +243,14 @@ export default function CommandesClient() {
           headers: { Authorization: `Bearer ${token}` },
           params: { showAll: true },
         });
-        console.log('🔍 [CommandesClient] Réponse API notifications:', response.data);
+        console.log('Réponse API notifications:', response.data);
         if (response.data.success) {
           setNotifications(response.data.data.notifications);
         } else {
-          console.error('❌ [CommandesClient] Erreur réponse notifications:', response.data.message);
+          console.error('Erreur réponse notifications:', response.data.message);
         }
       } catch (err) {
-        console.error('❌ [CommandesClient] Erreur chargement notifications:', err);
+        console.error('Erreur chargement notifications:', err);
         toast.error('Erreur lors du chargement des notifications');
       }
     };
@@ -260,7 +261,7 @@ export default function CommandesClient() {
         playNotificationSound();
       }
       if (event.data && event.data.type === 'PUSH_NOTIFICATION') {
-        console.log('📬 [CommandesClient] Message du Service Worker:', event.data);
+        console.log('Message du Service Worker:', event.data);
         toast.info(`Notification push: ${event.data.message}`);
         playNotificationSound();
       }
@@ -278,7 +279,7 @@ export default function CommandesClient() {
       if (cleanupExecuted) return;
       cleanupExecuted = true;
 
-      console.log('🧹 [CommandesClient] Nettoyage des ressources...');
+      console.log('Nettoyage des ressources...');
 
       if (socket) {
         socket.off('connect');
@@ -291,7 +292,7 @@ export default function CommandesClient() {
         socket.off('roomJoined');
         socket.off('pong');
         socket.disconnect();
-        console.log('📡 [CommandesClient] WebSocket déconnecté');
+        console.log('WebSocket déconnecté');
       }
 
       if ('serviceWorker' in navigator) {
@@ -313,7 +314,7 @@ export default function CommandesClient() {
       );
       
       if (response.data.success) {
-        console.log('✅ [CommandesClient] Notification marquée comme lue:', notificationId);
+        console.log('Notification marquée comme lue:', notificationId);
         toast.success('Notification marquée comme lue');
         
         // Mettre à jour localement
@@ -324,7 +325,7 @@ export default function CommandesClient() {
         );
       }
     } catch (error) {
-      console.error('❌ [CommandesClient] Erreur marquage notification:', error);
+      console.error('Erreur marquage notification:', error);
       toast.error('Erreur lors du marquage de la notification');
     }
   };
@@ -336,15 +337,18 @@ export default function CommandesClient() {
           <title>Commande #${commande._id}</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 20px; }
-            h1 { font-size: 24px; }
+            h1 { font-size: 24px; color: #1f2937; }
             .commande-details { margin-bottom: 20px; }
-            .medicament { display: flex; align-items: center; margin: 10px 0; }
-            .medicament img { width: 50px; height: 50px; margin-right: 10px; }
-            .total { font-weight: bold; margin-top: 20px; }
+            .medicament { display: flex; align-items: center; margin: 10px 0; padding: 10px; background: #f9fafb; border-radius: 8px; }
+            .medicament-icon { width: 50px; height: 50px; background: #e5e7eb; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 15px; color: #6b7280; font-weight: bold; }
+            .total { font-weight: bold; margin-top: 20px; font-size: 18px; color: #059669; }
+            .header { border-bottom: 2px solid #3b82f6; padding-bottom: 10px; margin-bottom: 20px; }
           </style>
         </head>
         <body>
-          <h1>Commande #${commande._id}</h1>
+          <div class="header">
+            <h1>Commande #${commande._id.substring(0, 8)}</h1>
+          </div>
           <div class="commande-details">
             <p><strong>Pharmacie:</strong> ${commande.pharmacyId?.pharmacieInfo?.nomPharmacie || 'Inconnu'}</p>
             <p><strong>Type:</strong> ${commande.livraison ? 'Livraison' : 'Récupération en pharmacie'}</p>
@@ -358,8 +362,8 @@ export default function CommandesClient() {
               .map(
                 (item) => `
                   <div class="medicament">
-                    ${item.image?.nomFichier ? `<img src="${API_URL}/Uploads/medicaments/${item.image.nomFichier}" alt="${item.nom}" />` : '<div style="width: 50px; height: 50px; background: #e5e7eb; display: flex; align-items: center; justify-content: center; margin-right: 10px;">Aucune image</div>'}
-                    <span>${item.nom} (x${item.quantite}) - ${item.prix * item.quantite} FCFA</span>
+                    <div class="medicament-icon">M</div>
+                    <span><strong>${item.nom}</strong> (x${item.quantite}) - ${item.prix * item.quantite} FCFA</span>
                   </div>
                 `
               )
@@ -375,136 +379,295 @@ export default function CommandesClient() {
     printWindow.print();
   };
 
-  if (loading) {
-    return <div className="p-6 text-white">Chargement...</div>;
-  }
+  const getStatusColor = (statut) => {
+    switch (statut) {
+      case 'en_attente':
+        return 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white';
+      case 'en_cours':
+        return 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white';
+      case 'terminée':
+        return 'bg-gradient-to-r from-green-500 to-emerald-500 text-white';
+      case 'annulée':
+        return 'bg-gradient-to-r from-red-500 to-rose-500 text-white';
+      default:
+        return 'bg-gradient-to-r from-gray-400 to-gray-500 text-white';
+    }
+  };
 
-  if (error) {
+  const getStatusIcon = (statut) => {
+    switch (statut) {
+      case 'en_attente':
+        return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>;
+      case 'en_cours':
+        return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>;
+      case 'terminée':
+        return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+        </svg>;
+      case 'annulée':
+        return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>;
+      default:
+        return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>;
+    }
+  };
+
+  if (loading) {
     return (
-      <div className="p-6 text-red-600">
-        <p>{error}</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8 flex items-center space-x-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="text-lg font-medium text-slate-700">Chargement des commandes...</div>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <ToastContainer />
-      <h1 className="text-2xl font-semibold mb-6 text-gray-800">Mes commandes</h1>
-      
-      <div className="mb-6">
-        <label className="mr-2 text-gray-700">Filtrer par statut:</label>
-        <select
-          value={statutFilter}
-          onChange={(e) => setStatutFilter(e.target.value)}
-          className="p-2 border border-gray-300 rounded-lg"
-        >
-          <option value="">Tous</option>
-          <option value="en_attente">En attente</option>
-          <option value="en_cours">En cours</option>
-          <option value="terminée">Terminée</option>
-          <option value="annulée">Annulée</option>
-        </select>
-      </div>
-
-      {commandes.length === 0 ? (
-        <p className="text-gray-600">Aucune commande trouvée.</p>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {commandes.map((commande) => (
-            <div key={commande._id} className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-lg font-bold text-gray-800">
-                Commande #{commande._id}
-              </h2>
-              <p className="text-gray-600">
-                <strong>Pharmacie:</strong> {commande.pharmacyId?.pharmacieInfo?.nomPharmacie || 'Inconnu'}
-              </p>
-              <p className="text-gray-600">
-                <strong>Type:</strong> {commande.livraison ? 'Livraison' : 'Récupération en pharmacie'}
-              </p>
-              {commande.livraison && (
-                <p className="text-gray-600">
-                  <strong>Adresse:</strong> {commande.adresseLivraison?.adresseTexte || 'Non spécifiée'}
-                </p>
-              )}
-              <p className="text-gray-600">
-                <strong>Statut:</strong> 
-                <span className={`ml-2 px-2 py-1 rounded text-sm ${
-                  commande.statut === 'en_attente' ? 'bg-yellow-100 text-yellow-800' :
-                  commande.statut === 'en_cours' ? 'bg-blue-100 text-blue-800' :
-                  commande.statut === 'terminée' ? 'bg-green-100 text-green-800' :
-                  'bg-red-100 text-red-800'
-                }`}>
-                  {commande.statut.replace('_', ' ')}
-                </span>
-              </p>
-              <p className="text-gray-600">
-                <strong>Date:</strong> {new Date(commande.createdAt).toLocaleString()}
-              </p>
-              
-              <h3 className="text-md font-semibold mt-4">Médicaments:</h3>
-              <ul className="list-disc pl-5">
-                {commande.medicaments.map((item) => (
-                  <li key={item.medicamentId}>
-                    <div className="flex items-center">
-                      {item.image?.nomFichier ? (
-                        <img
-                          src={`${API_URL}/Uploads/medicaments/${item.image.nomFichier}`}
-                          alt={item.nom}
-                          className="w-12 h-12 object-cover mr-2 rounded"
-                          onError={(e) => {
-                            console.error(`❌ [CommandesClient] Échec chargement image: ${API_URL}/Uploads/medicaments/${item.image.nomFichier}`, e);
-                            e.target.src = '/default-medicament.jpg';
-                          }}
-                        />
-                      ) : (
-                        <div className="w-12 h-12 bg-gray-200 mr-2 flex items-center justify-content-center rounded">
-                          Aucune image
-                        </div>
-                      )}
-                      <span>
-                        {item.nom} (x{item.quantite}) - {item.prix * item.quantite} FCFA
-                      </span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              <p className="font-bold mt-2">Total: {commande.total} FCFA</p>
-              <button
-                onClick={() => handlePrintCommande(commande)}
-                className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-              >
-                Imprimer
-              </button>
-            </div>
-          ))}
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-rose-50 to-pink-50 flex items-center justify-center p-6">
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-8 text-center max-w-md">
+          <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-red-800 mb-2">Erreur de chargement</h3>
+          <p className="text-red-600">{error}</p>
         </div>
-      )}
+      </div>
+    );
+  }
 
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Notifications</h2>
-        {notifications.length === 0 ? (
-          <p className="text-gray-600">Aucune notification.</p>
-        ) : (
-          <div className="space-y-2">
-            {notifications
-              .filter((notif) => !notif.lu)
-              .map((notif) => (
-                <div key={notif._id} className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-gray-800">{notif.message}</p>
-                      <p className="text-sm text-gray-600">{new Date(notif.date).toLocaleString()}</p>
+  const unreadNotifications = notifications.filter((notif) => !notif.lu);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
+      <ToastContainer 
+        position="top-right" 
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+        className="z-50"
+      />
+      
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8 mb-8">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent flex items-center">
+                <svg className="w-10 h-10 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                Mes Commandes
+              </h1>
+              <p className="text-slate-600 mt-2">
+                {commandes.length} commande{commandes.length > 1 ? 's' : ''} au total
+              </p>
+            </div>
+            
+            {/* Filtre par statut */}
+            <div className="flex items-center space-x-4">
+              <label className="text-slate-700 font-medium">Filtrer par statut:</label>
+              <select
+                value={statutFilter}
+                onChange={(e) => setStatutFilter(e.target.value)}
+                className="bg-white/80 backdrop-blur-sm border-2 border-gray-200 rounded-2xl px-4 py-3 text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+              >
+                <option value="">Tous les statuts</option>
+                <option value="en_attente">En attente</option>
+                <option value="en_cours">En cours</option>
+                <option value="terminée">Terminée</option>
+                <option value="annulée">Annulée</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Notifications non lues */}
+        {unreadNotifications.length > 0 && (
+          <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8 mb-8">
+            <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center">
+              <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-5-5V7c0-2.209-1.791-4-4-4S7 4.791 7 7v5l-5 5h5m4 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              Notifications ({unreadNotifications.length})
+            </h2>
+            <div className="space-y-4">
+              {unreadNotifications.map((notif) => (
+                <div key={notif._id} className="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 rounded-2xl p-6 transition-all duration-300 hover:shadow-lg">
+                  <div className="flex justify-between items-start gap-4">
+                    <div className="flex-1">
+                      <p className="text-slate-800 font-medium mb-2">{notif.message}</p>
+                      <p className="text-sm text-slate-600 flex items-center">
+                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {new Date(notif.date).toLocaleString()}
+                      </p>
                     </div>
                     <button
                       onClick={() => handleMarquerLue(notif._id)}
-                      className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                      className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white px-4 py-2 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center space-x-2"
                     >
-                      Marquer comme lu
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Marquer comme lu</span>
                     </button>
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Commandes */}
+        {commandes.length === 0 ? (
+          <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-12 text-center">
+            <div className="w-24 h-24 mx-auto mb-8 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
+              <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <h3 className="text-2xl font-bold text-slate-700 mb-4">Aucune commande trouvée</h3>
+            <p className="text-slate-600 text-lg">
+              {statutFilter 
+                ? `Aucune commande avec le statut "${statutFilter.replace('_', ' ')}"`
+                : "Vous n'avez pas encore passé de commande"
+              }
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+            {commandes.map((commande) => (
+              <div key={commande._id} className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden transition-all duration-300 hover:shadow-2xl hover:scale-105">
+                {/* Header de la commande */}
+                <div className="bg-gradient-to-r from-slate-700 to-gray-800 text-white p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <h2 className="text-xl font-bold">
+                      Commande #{commande._id.substring(0, 8)}
+                    </h2>
+                    <div className={`px-3 py-1 rounded-full text-sm font-medium flex items-center space-x-1 ${getStatusColor(commande.statut)}`}>
+                      {getStatusIcon(commande.statut)}
+                      <span>{commande.statut.replace('_', ' ')}</span>
+                    </div>
+                  </div>
+                  <div className="text-slate-200 space-y-2">
+                    <p className="flex items-center">
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                      <strong>Pharmacie:</strong>&nbsp;{commande.pharmacyId?.pharmacieInfo?.nomPharmacie || 'Inconnu'}
+                    </p>
+                    <p className="flex items-center">
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                      </svg>
+                      <strong>Type:</strong>&nbsp;{commande.livraison ? 'Livraison' : 'Récupération en pharmacie'}
+                    </p>
+                    {commande.livraison && (
+                      <p className="flex items-start">
+                        <svg className="w-4 h-4 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span><strong>Adresse:</strong>&nbsp;{commande.adresseLivraison?.adresseTexte || 'Non spécifiée'}</span>
+                      </p>
+                    )}
+                    <p className="flex items-center">
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <strong>Date:</strong>&nbsp;{new Date(commande.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Corps de la commande */}
+                <div className="p-6">
+                  <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 8.172V5L8 4z" />
+                    </svg>
+                    Médicaments ({commande.medicaments.length})
+                  </h3>
+                  
+                  <div className="space-y-3 mb-6">
+                    {commande.medicaments.map((item, index) => (
+                      <div key={`${item.medicamentId || index}`} className="bg-gradient-to-r from-slate-50 to-gray-50 rounded-2xl p-4 border border-gray-100">
+                        <div className="flex items-center space-x-4">
+                          {/* Icône médicament au lieu d'image */}
+                          <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl flex items-center justify-center text-2xl shadow-sm">
+                            M
+                          </div>
+                          
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-slate-800 mb-1">{item.nom}</h4>
+                            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600">
+                              <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">
+                                Quantité: {item.quantite}
+                              </span>
+                              <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">
+                                {item.prix * item.quantite} FCFA
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Total */}
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-4 mb-6">
+                    <div className="flex items-center justify-between">
+                      <span className="text-lg font-bold text-green-800">Total de la commande:</span>
+                      <span className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                        {commande.total} FCFA
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Bouton d'impression */}
+                  <button
+                    onClick={() => handlePrintCommande(commande)}
+                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-6 py-4 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    <span>Imprimer la commande</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Message si aucune notification */}
+        {notifications.length === 0 && (
+          <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8 mt-8 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-5-5V7c0-2.209-1.791-4-4-4S7 4.791 7 7v5l-5 5h5m4 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-slate-700 mb-2">Aucune notification</h3>
+            <p className="text-slate-600">Vous n'avez aucune notification pour le moment.</p>
           </div>
         )}
       </div>

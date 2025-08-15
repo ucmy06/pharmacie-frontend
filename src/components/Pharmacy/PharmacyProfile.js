@@ -73,7 +73,7 @@ export default function PharmacyProfile() {
         />
       </div>
 
-      <div className="mb-4">
+      {/* <div className="mb-4">
         <label className="block mb-1">Proposez-vous la livraison ?</label>
         <input
           name="livraisonDisponible"
@@ -82,7 +82,7 @@ export default function PharmacyProfile() {
           onChange={handleChange}
           className="mr-2"
         />
-      </div>
+      </div> */}
 
       <div className="mb-6">
         <h3 className="text-lg font-medium mb-2">🕒 Heures d'ouverture</h3>

@@ -179,10 +179,10 @@ export default function PharmacieDashboard() {
             <strong>Adresse :</strong>{' '}
             {pharmacieInfo.adresseGoogleMaps || 'Non spécifiée'}
           </p>
-          <p className="text-gray-700">
+          {/* <p className="text-gray-700">
             <strong>Livraison disponible :</strong>{' '}
             {pharmacieInfo.livraisonDisponible ? 'Oui' : 'Non'}
-          </p>
+          </p> */}
           <p className="text-gray-700">
             <strong>Statut de garde :</strong>{' '}
             {pharmacieInfo.estDeGarde ? 'En garde' : 'Hors garde'}
@@ -211,6 +211,13 @@ export default function PharmacieDashboard() {
               className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
             >
               Gérer les demandes d'intégration
+            </button>
+
+            <button
+              onClick={() => navigate('/pharmacie/connexions')} // Nouveau bouton
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              Voir les connexions
             </button>
           
           <button
