@@ -1,3 +1,5 @@
+// C:\reactjs node mongodb\pharmacie-frontend\src\pages\CommandesClient.jsx
+
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -334,7 +336,7 @@ export default function CommandesClient() {
     const printContent = `
       <html>
         <head>
-          <title>Commande #${commande._id}</title>
+          <title>Commande de medicaments</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 20px; }
             h1 { font-size: 24px; color: #1f2937; }
@@ -347,7 +349,7 @@ export default function CommandesClient() {
         </head>
         <body>
           <div class="header">
-            <h1>Commande #${commande._id.substring(0, 8)}</h1>
+            <h1>Commande de médicaments</h1>
           </div>
           <div class="commande-details">
             <p><strong>Pharmacie:</strong> ${commande.pharmacyId?.pharmacieInfo?.nomPharmacie || 'Inconnu'}</p>
@@ -560,7 +562,7 @@ export default function CommandesClient() {
                 <div className="bg-gradient-to-r from-slate-700 to-gray-800 text-white p-6">
                   <div className="flex justify-between items-start mb-4">
                     <h2 className="text-xl font-bold">
-                      Commande #{commande._id.substring(0, 8)}
+                      Commande de médicaments
                     </h2>
                     <div className={`px-3 py-1 rounded-full text-sm font-medium flex items-center space-x-1 ${getStatusColor(commande.statut)}`}>
                       {getStatusIcon(commande.statut)}

@@ -61,7 +61,7 @@ export default function CommandeDetails() {
       <ToastContainer />
       <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-6">
         <h1 className="text-2xl font-bold text-blue-700 mb-6">
-          📋 Détails de la commande #{commande._id}
+          📋 Détails de la commande de médicament
         </h1>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>

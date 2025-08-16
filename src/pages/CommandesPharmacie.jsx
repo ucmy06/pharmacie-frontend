@@ -1,3 +1,5 @@
+// C:\reactjs node mongodb\pharmacie-frontend\src\pages\CommandesPharmacie.jsx
+
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { toast, Toaster } from 'react-hot-toast';
@@ -23,9 +25,7 @@ import {
   ListItemText,
   Typography,
   Box,
-  Badge,
 } from '@mui/material';
-import NotificationsIcon from '@mui/icons-material/Notifications';
 
 const CommandesPharmacie = () => {
   const [commandes, setCommandes] = useState([]);
@@ -232,14 +232,93 @@ const CommandesPharmacie = () => {
     };
   }, []);
 
+  const handleMarquerNotificationsCommeLues = async (commandeId) => {
+    try {
+      const token = localStorage.getItem('pharmacyToken');
+      const pharmacyInfo = JSON.parse(localStorage.getItem('pharmacyInfo') || '{}');
+      const pharmacyId = pharmacyInfo._id;
+
+      console.log('🔄 [handleMarquerNotificationsCommeLues] Début pour commande:', commandeId);
+
+      // Trouver toutes les notifications non lues liées à cette commande
+      const notificationsNonLues = notifications.filter(
+        notif => !notif.lu && (
+          notif.message.includes(commandeId) || 
+          notif.commandeId === commandeId ||
+          notif.relatedId === commandeId
+        )
+      );
+
+      console.log('🔍 [handleMarquerNotificationsCommeLues] Notifications à marquer:', notificationsNonLues.length);
+
+      // Marquer chaque notification comme lue
+      for (const notification of notificationsNonLues) {
+        try {
+          const response = await axios.put(
+            `http://localhost:3001/api/notifications/${notification._id}/marquer-lue`,
+            { pharmacyId },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+
+          console.log('✅ [handleMarquerNotificationsCommeLues] Notification marquée:', notification._id);
+
+          if (response.data.success) {
+            setNotifications((prev) =>
+              prev.map((notif) => (notif._id === notification._id ? { ...notif, lu: true } : notif))
+            );
+          }
+        } catch (error) {
+          console.error('❌ [handleMarquerNotificationsCommeLues] Erreur pour notification:', notification._id, error);
+        }
+      }
+
+      if (notificationsNonLues.length > 0) {
+        toast.success(`${notificationsNonLues.length} notification(s) marquée(s) comme lue(s)`);
+      }
+    } catch (error) {
+      console.error('❌ [handleMarquerNotificationsCommeLues] Erreur générale:', error);
+    }
+  };
+
   const handleVoirDetails = async (commandeId) => {
     try {
       const token = localStorage.getItem('pharmacyToken');
+      
+      console.log('🔄 [handleVoirDetails] Début pour commande:', commandeId);
+      
+      // Trouver la commande dans la liste actuelle pour vérifier son statut
+      const commandeActuelle = commandes.find(cmd => cmd._id === commandeId);
+      
+      // Si le statut est "en_attente", le passer automatiquement à "en_cours"
+      if (commandeActuelle && commandeActuelle.statut === 'en_attente') {
+        console.log('📝 [handleVoirDetails] Mise à jour automatique du statut: en_attente → en_cours');
+        
+        try {
+          await handleUpdateStatut(commandeId, 'en_cours');
+          toast.info('Statut mis à jour automatiquement : En cours');
+        } catch (statusError) {
+          console.error('❌ [handleVoirDetails] Erreur mise à jour statut:', statusError);
+          // Continuer même si la mise à jour du statut échoue
+        }
+      }
+      
+      // Marquer les notifications liées à cette commande comme lues
+      await handleMarquerNotificationsCommeLues(commandeId);
+      
+      // Récupérer les détails de la commande
       const response = await axios.get(`http://localhost:3001/api/client/commandes/${commandeId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log('✅ [handleVoirDetails] Détails:', response.data);
-      setSelectedCommande(response.data.commande);
+      
+      console.log('✅ [handleVoirDetails] Détails récupérés:', response.data);
+      
+      // Si on a mis à jour le statut, utiliser le nouveau statut
+      const commandeDetails = response.data.commande;
+      if (commandeActuelle && commandeActuelle.statut === 'en_attente') {
+        commandeDetails.statut = 'en_cours';
+      }
+      
+      setSelectedCommande(commandeDetails);
       setOpenDialog(true);
     } catch (error) {
       console.error('❌ [handleVoirDetails] Erreur:', JSON.stringify(error.response?.data, null, 2));
@@ -270,37 +349,6 @@ const CommandesPharmacie = () => {
     } catch (error) {
       console.error('❌ [handleUpdateStatut] Erreur:', JSON.stringify(error.response?.data, null, 2));
       toast.error(error.response?.data?.message || 'Erreur lors de la mise à jour du statut');
-    }
-  };
-
-  const handleMarquerLue = async (notificationId) => {
-    try {
-      const token = localStorage.getItem('pharmacyToken');
-      const pharmacyInfo = JSON.parse(localStorage.getItem('pharmacyInfo') || '{}');
-      const pharmacyId = pharmacyInfo._id;
-
-      console.log('🔄 [handleMarquerLue] Début:', { notificationId, pharmacyId });
-
-      const response = await axios.put(
-        `http://localhost:3001/api/notifications/${notificationId}/marquer-lue`,
-        { pharmacyId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      console.log('✅ [handleMarquerLue] Réponse:', response.data);
-
-      if (response.data.success) {
-        setNotifications((prev) =>
-          prev.map((notif) => (notif._id === notificationId ? { ...notif, lu: true } : notif))
-        );
-        toast.success('Notification marquée comme lue');
-      } else {
-        toast.error(response.data.message || 'Erreur lors du marquage');
-      }
-    } catch (error) {
-      console.error('❌ [handleMarquerLue] Erreur:', error);
-      const errorMessage = error.response?.data?.message || 'Erreur lors du marquage de la notification';
-      toast.error(errorMessage);
     }
   };
 
@@ -424,7 +472,7 @@ const CommandesPharmacie = () => {
       )}
 
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
-        <DialogTitle>Détails de la commande #{selectedCommande?._id}</DialogTitle>
+        <DialogTitle>Détails de la commande de medicament</DialogTitle>
         <DialogContent>
           {selectedCommande && (
             <Box>
@@ -476,47 +524,6 @@ const CommandesPharmacie = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      <Typography variant="h5" sx={{ mt: 4, mb: 3 }}>
-        Notifications
-        <Badge badgeContent={notifications.filter(n => !n.lu).length} color="primary" sx={{ ml: 2 }}>
-          <NotificationsIcon />
-        </Badge>
-      </Typography>
-      {notifications.length === 0 ? (
-        <Typography>Aucune notification trouvée</Typography>
-      ) : (
-        <List>
-          {notifications.map((notif) => (
-            <ListItem
-              key={notif._id}
-              secondaryAction={
-                !notif.lu && (
-                  <Button
-                    variant="contained"
-                    color="success"
-                    size="small"
-                    onClick={() => handleMarquerLue(notif._id)}
-                  >
-                    Marquer comme lue
-                  </Button>
-                )
-              }
-              sx={{
-                mb: 1,
-                bgcolor: notif.lu ? 'background.paper' : 'action.hover',
-                borderRadius: 1,
-                boxShadow: 1,
-              }}
-            >
-              <ListItemText
-                primary={notif.message}
-                secondary={`${new Date(notif.date).toLocaleString()} ${notif.lu ? '(Lu)' : '(Non lu)'}`}
-              />
-            </ListItem>
-          ))}
-        </List>
-      )}
     </Box>
   );
 };

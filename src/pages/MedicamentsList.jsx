@@ -240,6 +240,31 @@ export default function MedicamentsList() {
     });
   };
 
+
+  const subscribeToAlert = async (medicament) => {
+  try {
+    console.log('🔔 [subscribeToAlert] Abonnement à l\'alerte pour:', medicament.nom);
+    
+    const response = await axiosInstance.post('/api/client/alerts/subscribe', {
+      medicamentId: medicament._id,
+      pharmacyId: medicament.pharmacyId
+    });
+
+    console.log('✅ [subscribeToAlert] Réponse:', response.data);
+    toast.success('Vous serez alerté quand ce produit sera disponible !');
+  } catch (error) {
+    console.error('❌ [subscribeToAlert] Erreur:', error);
+    
+    let errorMessage = 'Erreur lors de l\'abonnement à l\'alerte';
+    
+    if (error.response) {
+      errorMessage = error.response.data?.message || errorMessage;
+    }
+    
+    toast.error(errorMessage);
+  }
+};
+
   // Fonctions pour la modal
   const openModal = (medicament) => {
     setSelectedMedicament(medicament);
@@ -567,7 +592,17 @@ export default function MedicamentsList() {
                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
                         : 'bg-blue-600 hover:bg-blue-700 text-white'
                     }`}
+                    
                   >
+
+                    {med.quantite_stock === 0 && (
+              <button
+                    onClick={() => subscribeToAlert(med)}
+                    className="px-3 py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 rounded-lg font-medium transition-colors text-sm"
+                  >
+                    M'alerter
+                  </button>
+                )}
                     {med.quantite_stock === 0 ? 'Rupture' : 'Ajouter'}
                   </button>
                   
